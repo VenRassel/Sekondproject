@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Management</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+        }
+        
+        .message {
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .form-section {
+            background: #f8f9fa;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        input[type="text"],
+        input[type="number"],
+        textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+        }
+        
+        textarea {
+            min-height: 80px;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: 1px solid #ccc;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-primary {
+            background: #007bff;
+            color: white;
+            border: 1px solid #007bff;
+        }
+        
+        .btn-edit {
+            background: #28a745;
+            color: white;
+            border: 1px solid #28a745;
+            padding: 5px 10px;
+        }
+        
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+            border: 1px solid #dc3545;
+            padding: 5px 10px;
+        }
+        
+        .btn-cancel {
+            background: #6c757d;
+            color: white;
+            border: 1px solid #6c757d;
+            margin-left: 10px;
+        }
+        
+        .btn-back {
+            background: #6c757d;
+            color: white;
+            padding: 8px 16px;
+            text-decoration: none;
+            border: 1px solid #6c757d;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+        
+        .products-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .products-table th,
+        .products-table td {
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        
+        .products-table th {
+            background: #007bff;
+            color: white;
+        }
+        
+        .products-table td:last-child {
+            text-align: center;
+        }
+        
+        .action-buttons {
+            display: inline-block;
+        }
+        
+        .action-buttons form {
+            display: inline;
+            margin-left: 5px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="back-button">
+            <a href="{% url 'landing' %}" class="btn-back">← Back to Home</a>
+        </div>
+        <h1>📦 Product Management</h1>
+        
+        <!-- Messages -->
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="message {{ message.tags }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <!-- Add/Edit Product Form -->
+        <div class="form-section">
+            <h2>{% if editing_product %}✏️ Edit Product{% else %}➕ Add New Product{% endif %}</h2>
+            <form method="POST" action="{% if editing_product %}{% url 'edit_product' editing_product.id %}{% else %}{% url 'add_product' %}{% endif %}">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="name">Product Name *</label>
+                    <input type="text" id="name" name="name" required 
+                           value="{% if editing_product %}{{ editing_product.name }}{% endif %}"
+                           placeholder="Enter product name">
+                </div>
+                
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea id="description" name="description" 
+                              placeholder="Enter product description">{% if editing_product %}{{ editing_product.description }}{% endif %}</textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="price">Price *</label>
+                    <input type="number" id="price" name="price" step="0.01" required 
+                           value="{% if editing_product %}{{ editing_product.price }}{% endif %}"
+                           placeholder="0.00">
+                </div>
+                
+                <div class="form-group">
+                    <label for="quantity">Quantity</label>
+                    <input type="number" id="quantity" name="quantity" 
+                           value="{% if editing_product %}{{ editing_product.quantity }}{% else %}0{% endif %}"
+                           placeholder="0">
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    {% if editing_product %}Update Product{% else %}Add Product{% endif %}
+                </button>
+                {% if editing_product %}
+                <a href="{% url 'product' %}" class="btn btn-cancel">Cancel</a>
+                {% endif %}
+            </form>
+        </div>
+        
+        <!-- Products List -->
+        <div class="form-section">
+            <h2>📋 Product List</h2>
+            {% if products %}
+            <table class="products-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Price</th>
+                        <th>Quantity</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products %}
+                    <tr>
+                        <td>{{ product.id }}</td>
+                        <td><strong>{{ product.name }}</strong></td>
+                        <td>{{ product.description|default:"-" }}</td>
+                        <td>₱{{ product.price }}</td>
+                        <td>{{ product.quantity }}</td>
+                        <td>{{ product.created_at|date:"M d, Y" }}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <a href="{% url 'edit_product' product.id %}" class="btn btn-edit">Edit</a>
+                                <form method="POST" action="{% url 'delete_product' product.id %}" style="display: inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-delete" 
+                                            onclick="return confirm('Are you sure you want to delete {{ product.name }}?')">
+                                        Delete
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state">
+                <p>No products yet. Add your first product above! 🎉</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
