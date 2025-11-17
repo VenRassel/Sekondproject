@@ -152,7 +152,7 @@
         <div class="back-button">
             <a href="{% url 'landing' %}" class="btn-back">← Back to Home</a>
         </div>
-        <h1>📦 Product Management</h1>
+        <h1>Product Management</h1>
         
         <!-- Messages -->
         {% if messages %}
@@ -167,7 +167,7 @@
         
         <!-- Add/Edit Product Form -->
         <div class="form-section">
-            <h2>{% if editing_product %}✏️ Edit Product{% else %}➕ Add New Product{% endif %}</h2>
+            <h2>{% if editing_product %}Edit Product{% else %}Add New Product{% endif %}</h2>
             <form method="POST" action="{% if editing_product %}{% url 'edit_product' editing_product.id %}{% else %}{% url 'add_product' %}{% endif %}">
                 {% csrf_token %}
                 <div class="form-group">
@@ -208,12 +208,11 @@
         
         <!-- Products List -->
         <div class="form-section">
-            <h2>📋 Product List</h2>
+            <h2>Product List</h2>
             {% if products %}
             <table class="products-table">
                 <thead>
                     <tr>
-                        <th>ID</th>
                         <th>Name</th>
                         <th>Description</th>
                         <th>Price</th>
@@ -225,7 +224,6 @@
                 <tbody>
                     {% for product in products %}
                     <tr>
-                        <td>{{ product.id }}</td>
                         <td><strong>{{ product.name }}</strong></td>
                         <td>{{ product.description|default:"-" }}</td>
                         <td>₱{{ product.price }}</td>

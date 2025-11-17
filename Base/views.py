@@ -1,13 +1,18 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from .models import Product
+from django.shortcuts import render
 
 def landing(request):
-    return render(request, 'design/landing.html')
+    products = Product.objects.all()
+    return render(request, 'design/landing.html', {'products': products})
 
 def product(request):
     products = Product.objects.all()
     return render(request, 'design/product.html', {'products': products})
+
+def category(request):
+    return render(request, 'design/category.html')
 
 def add_product(request):
     if request.method == 'POST':
@@ -76,4 +81,3 @@ def delete_product(request, product_id):
         return redirect('product')
     
     return redirect('product')
-

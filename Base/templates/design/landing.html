@@ -7,7 +7,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>Inventory system</h1>
+        <h1>Inventory System</h1>
     </div>
 
     <div class="container">
@@ -16,9 +16,42 @@
             <ul>
                 <li><a href="">Home</a></li>
                 <li><a href="product">Product</a></li>
-                <li><a href="">Category</a></li>
+                <li><a href="category">Category</a></li>
                 <li><a href="">Log out</a></li>
             </ul>
+        </div>
+
+        <div class="form-section">
+            <h2>Product List</h2>
+            {% if products %}
+            <table class="products-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Price</th>
+                        <th>Quantity</th>
+                        <th>Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products %}
+                    <tr>
+                        <td><strong>{{ product.name }}</strong></td>
+                        <td>{{ product.description|default:"-" }}</td>
+                        <td>₱{{ product.price }}</td>
+                        <td>{{ product.quantity }}</td>
+                        <td>{{ product.created_at|date:"M d, Y" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state">
+                <p>No products yet. Add your first product above! 🎉</p>
+            </div>
+            {% endif %}
+        </div>
     </div>
 </body>
 </html>
