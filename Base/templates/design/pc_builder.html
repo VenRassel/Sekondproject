@@ -1,0 +1,102 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PC Builder</title>
+    <link rel="stylesheet" href="{% static 'css/pc_builder.css' %}">
+
+</head>
+<body>
+    <div class="container">
+        <div class="back-button">
+            <a href="{% url 'landing' %}" class="btn-back">← Back to Home</a>
+        </div>
+<div class="box">
+    <h2>PC Builder</h2>
+
+    <!-- RAM -->
+    <label>Choose RAM</label>
+    <select id="ram" onchange="calculateTotal()">
+        <option value="0">-- Select RAM --</option>
+        {% for p in ram %}
+        <option value="{{ p.price }}">{{ p.name }} (₱{{ p.price }})</option>
+        {% endfor %}
+    </select>
+
+    <!-- Motherboard -->
+    <label>Choose Motherboard</label>
+    <select id="motherboard" onchange="calculateTotal()">
+        <option value="0">-- Select Motherboard --</option>
+        {% for p in motherboard %}
+        <option value="{{ p.price }}">{{ p.name }} (₱{{ p.price }})</option>
+        {% endfor %}
+    </select>
+
+    <!-- CPU -->
+    <label>Choose CPU</label>
+    <select id="cpu" onchange="calculateTotal()">
+        <option value="0">-- Select CPU --</option>
+        {% for p in cpu %}
+        <option value="{{ p.price }}">{{ p.name }} (₱{{ p.price }})</option>
+        {% endfor %}
+    </select>
+
+    <!-- GPU -->
+    <label>Choose GPU</label>
+    <select id="gpu" onchange="calculateTotal()">
+        <option value="0">-- Select GPU --</option>
+        {% for p in gpu %}
+        <option value="{{ p.price }}">{{ p.name }} (₱{{ p.price }})</option>
+        {% endfor %}
+    </select>
+
+    <!-- Storage -->
+    <label>Choose Storage</label>
+    <select id="storage" onchange="calculateTotal()">
+        <option value="0">-- Select Storage --</option>
+        {% for p in storage %}
+        <option value="{{ p.price }}">{{ p.name }} (₱{{ p.price }})</option>
+        {% endfor %}
+    </select>
+
+    <!-- PSU -->
+    <label>Choose Power Supply</label>
+    <select id="psu" onchange="calculateTotal()">
+        <option value="0">-- Select PSU --</option>
+        {% for p in psu %}
+        <option value="{{ p.price }}">{{ p.name }} (₱{{ p.price }})</option>
+        {% endfor %}
+    </select>
+
+    <!-- Case -->
+    <label>Choose Case</label>
+    <select id="case" onchange="calculateTotal()">
+        <option value="0">-- Select Case --</option>
+        {% for p in case %}
+        <option value="{{ p.price }}">{{ p.price }}">{{ p.name }} (₱{{ p.price }})</option>
+        {% endfor %}
+    </select>
+
+    <h2>Total Price: ₱ <span id="total">0.00</span></h2>
+
+</div>
+
+<script>
+    function calculateTotal() {
+        let total =
+            parseFloat(document.getElementById("ram").value) +
+            parseFloat(document.getElementById("motherboard").value) +
+            parseFloat(document.getElementById("cpu").value) +
+            parseFloat(document.getElementById("gpu").value) +
+            parseFloat(document.getElementById("storage").value) +
+            parseFloat(document.getElementById("psu").value) +
+            parseFloat(document.getElementById("case").value);
+
+        document.getElementById("total").innerText = total.toFixed(2);
+    }
+</script>
+
+</body>
+</html>

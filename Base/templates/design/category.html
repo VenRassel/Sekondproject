@@ -1,41 +1,76 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Category</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-        }
-        
-        .btn-back {
-            background: #6c757d;
-            color: white;
-            padding: 8px 16px;
-            text-decoration: none;
-            border: 1px solid #6c757d;
-            margin-bottom: 20px;
-            display: inline-block;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-          h1 {
-            text-align: center;
-        }
-    </style>
+    <title>Category View</title>
+    <link rel="stylesheet" href="{% static 'css/product.css' %}">
 </head>
 <body>
+
     <div class="container">
         <div class="back-button">
             <a href="{% url 'landing' %}" class="btn-back">← Back to Home</a>
         </div>
-    <h1>Welcome bading</h1>
-</body>
-</html>
+
+        <h1>Product Categories</h1>
+
+        <!-- SEARCH BAR (laging visible) -->
+<form method="GET" action="" class="search-form">
+    <input type="text" name="search" placeholder="Search product..."
+           value="{{ search_query }}" class="search-input">
+    <button type="submit" class="btn btn-primary">Search</button>
+
+    {% if search_query %}
+    <a href="{% url 'product' %}" class="btn btn-cancel">Clear</a>
+    {% endif %}
+</form>
+
+        <!-- CATEGORY FILTER BUTTONS -->
+        <div class="category-buttons">
+            <a href="?category=ram" class="btn btn-filter {% if category_filter == 'ram' %}active{% endif %}">RAM</a>
+            <a href="?category=motherboard" class="btn btn-filter {% if category_filter == 'motherboard' %}active{% endif %}">Motherboard</a>
+            <a href="?category=cpu" class="btn btn-filter {% if category_filter == 'cpu' %}active{% endif %}">CPU</a>
+            <a href="?category=gpu" class="btn btn-filter {% if category_filter == 'gpu' %}active{% endif %}">GPU</a>
+            <a href="?category=storage" class="btn btn-filter {% if category_filter == 'storage' %}active{% endif %}">Storage</a>
+            <a href="?category=psu" class="btn btn-filter {% if category_filter == 'psu' %}active{% endif %}">PSU</a>
+            <a href="?category=case" class="btn btn-filter {% if category_filter == 'case' %}active{% endif %}">Case</a>
+
+            <a href="{% url 'category' %}" class="btn btn-cancel">Clear</a>
+        </div>
+
+        <h2>Product Masterlist</h2>
+
+        <table class="products-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Category</th>
+                    <th>Price</th>
+                    <th>Quantity</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% if products %}
+                    {% for product in products %}
+                    <tr>
+                        <td><strong>{{ product.name }}</strong></td>
+                        <td>{{ product.description|default:"-" }}</td>
+                        <td>{{ product.category|title }}</td>
+                        <td>₱{{ product.price }}</td>
+                        <td>{{ product.quantity }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="5" style="text-align:center; padding:20px;">
+                            No products found{% if category_filter %} in 
+                            <strong>{{ category_filter|title }}</strong> category{% endif %}.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        
