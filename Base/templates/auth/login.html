@@ -1,0 +1,30 @@
+{% extends "layout.html" %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Login</h2>
+
+    {% if messages %}
+        {% for msg in messages %}
+            <p class="error">{{ msg }}</p>
+        {% endfor %}
+    {% endif %}
+
+    <form method="POST">
+        {% csrf_token %}
+        {{ form.username.label }}  
+        {{ form.username }}
+
+        {{ form.password.label }}
+        {{ form.password }}
+
+        <button type="submit">Login</button>
+    </form>
+
+    <div class="center">
+        <p>Don't have an account? <a href="{% url 'signup' %}">Sign up</a></p>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,24 @@
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        
+        .btn-back {
+            background: #6c757d;
+            color: white;
+            padding: 8px 16px;
+            text-decoration: none;
+            border: 1px solid #6c757d;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+          h1 {
+            text-align: center;
+        }
