@@ -122,6 +122,7 @@
         <tr>
             <th>Name</th>
             <th>Description</th>
+            <th>Category</th>
             <th>Price</th>
             <th>Quantity</th>
             <th>Created</th>
@@ -135,6 +136,7 @@
             <tr>
                 <td><strong>{{ product.name }}</strong></td>
                 <td>{{ product.description|default:"-" }}</td>
+                <td>{{ product.category|title }}</td>
                 <td>₱{{ product.price }}</td>
                 <td>{{ product.quantity }}</td>
                 <td>{{ product.created_at|date:"M d, Y" }}</td>

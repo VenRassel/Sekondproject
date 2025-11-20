@@ -166,12 +166,12 @@ def login_view(request):
 
     return render(request, 'auth/login.html', {'form': form})
 
-
+@login_required
 def logout_view(request):
     logout(request)
     return redirect('login')
 
-
+@login_required
 def signup_view(request):
     if request.user.is_authenticated:
         return redirect('landing')
