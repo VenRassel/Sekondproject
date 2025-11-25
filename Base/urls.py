@@ -1,30 +1,20 @@
 from django.urls import path
-from .views import (
-    landing,
-    product,
-    add_product,
-    category,
-    edit_product,
-    delete_product,
-    pc_builder,
-    login_view,
-    logout_view,
-    signup_view,
-)
+from . import views
 
 urlpatterns = [
-    path('', landing, name='landing'),
-    path('product/', product, name='product'),
-    path('add-product/', add_product, name='add_product'),
-    path('category/', category, name='category'),
-    path('edit/<int:product_id>/', edit_product, name='edit_product'),
-    path('delete/<int:product_id>/', delete_product, name='delete_product'),
-    path('pc_builder/', pc_builder, name='pc_builder'),
-    path('logout/', logout_view, name='logout'),
+    path('', views.landing, name='landing'),
+    path('product/', views.product, name='product'),
+    path('add_product/', views.add_product, name='add-product'),
+    path('category/', views.category, name='category'),
+    path('edit_product/<int:product_id>/', views.edit_product, name='edit-product'),
+    path('delete_product/<int:product_id>/', views.delete_product, name='delete-product'),
+    path('pc_builder/', views.pc_builder, name='pc-builder'),
 
+    # auth
+    path('login/', views.login_view, name='login'),
+    path('logout/', views.logout_view, name='logout'),
+    path('signup/', views.signup_view, name='signup'),
 
-     # 🔐 AUTH ROUTES
-    path('login/', login_view, name='login'),
-    path('logout/', logout_view, name='logout'),
-    path('signup/', signup_view, name='signup'),
+    # PROFILE SETTINGS
+    path('profile/settings/', views.profile_settings, name='profile-settings'),
 ]

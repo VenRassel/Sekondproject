@@ -1,0 +1,32 @@
+<!-- Base/templates/profile/settings.html -->
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Profile Settings{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Profile Settings</h2>
+
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <h4>Account</h4>
+        {{ u_form.as_p }}
+
+        <h4>Profile</h4>
+        {% if user.profile.profile_picture %}
+            <div style="margin-bottom:10px;">
+                <img src="{{ user.profile.profile_picture.url }}" alt="Profile pic" style="width:120px;border-radius:8px;">
+            </div>
+        {% endif %}
+        {{ p_form.as_p }}
+
+        <button type="submit">Save Changes</button>
+    </form>
+
+    <div class="center" style="margin-top:12px;">
+        <a href="{% url 'landing' %}">Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}

@@ -28,7 +28,7 @@
         <!-- Add/Edit Product Form -->
         <div class="form-section">
             <h2>{% if editing_product %}Edit Product{% else %}Add New Product{% endif %}</h2>
-            <form method="POST" action="{% if editing_product %}{% url 'edit_product' editing_product.id %}{% else %}{% url 'add_product' %}{% endif %}">
+            <form method="POST" action="{% if editing_product %}{% url 'edit-product' editing_product.id %}{% else %}{% url 'add-product' %}{% endif %}">
                 {% csrf_token %}
                 <div class="form-group">
                     <label for="name">Product Name *</label>
@@ -75,7 +75,12 @@
                     {% if editing_product %}Update Product{% else %}Add Product{% endif %}
                 </button>
                 {% if editing_product %}
-                <a href="{% url 'product' %}" class="btn btn-cancel">Cancel</a>
+                <a href="{% if request.GET.category %}
+                          /category/?category={{ request.GET.category }}
+                          {% else %}
+                         {% url 'product' %}
+                          {% endif %}
+                         " class="btn btn-cancel">Cancel</a>
                 {% endif %}
             </form>
         </div>
@@ -142,8 +147,8 @@
                 <td>{{ product.created_at|date:"M d, Y" }}</td>
                 <td>
                     <div class="action-buttons">
-                        <a href="{% url 'edit_product' product.id %}" class="btn btn-edit">Edit</a>
-                        <form method="POST" action="{% url 'delete_product' product.id %}" style="display: inline;">
+                        <a href="{% url 'edit-product' product.id %}" class="btn btn-edit">Edit</a>
+                        <form method="POST" action="{% url 'delete-product' product.id %}" style="display: inline;">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-delete"
                                 onclick="return confirm('Are you sure you want to delete {{ product.name }}?')">

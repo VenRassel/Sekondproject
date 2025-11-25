@@ -1,11 +1,14 @@
+# Base/views.py
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from .models import Product
-from django.shortcuts import render
 from .models import Product, CATEGORY_CHOICES
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.decorators import login_required
+
+# new imports
+from .forms import UserUpdateForm, ProfileUpdateForm
 
 @login_required
 def landing(request):
@@ -83,6 +86,7 @@ def category(request):
 @login_required
 def edit_product(request, product_id):
     product = get_object_or_404(Product, id=product_id)
+    category_filter = request.GET.get('category', '')
 
     if request.method == 'POST':
         name = request.POST.get('name')
@@ -93,39 +97,41 @@ def edit_product(request, product_id):
 
         if not name or not price:
             messages.error(request, "Product name and price are required.")
-            return redirect('product')
+            return redirect('category')
 
         try:
             product.name = name
             product.description = description
             product.price = price
             product.quantity = int(quantity) if quantity else 0
-            product.category = category  # <-- FIXED
+            product.category = category
             product.save()
 
             messages.success(request, f"Product '{name}' updated successfully!")
         except Exception as e:
             messages.error(request, f"Error updating product: {str(e)}")
 
-        return redirect('product')
+        return redirect(f'/category/?category={category_filter}')
 
     products = Product.objects.all()
     return render(request, 'design/product.html', {
-        'products': products,
-        'editing_product': product
-    })
+    'products': products,
+    'editing_product': product,
+    'category_filter': request.GET.get('category', '')
+})
 
 @login_required
 def delete_product(request, product_id):
     product = get_object_or_404(Product, id=product_id)
-    
+    category_filter = request.GET.get('category', '')
+
     if request.method == 'POST':
         product_name = product.name
         product.delete()
         messages.success(request, f"Product '{product_name}' deleted successfully!")
-        return redirect('product')
-    
-    return redirect('product')
+        return redirect(f'/category/?category={category_filter}')
+
+    return redirect('category')
 
 @login_required
 def pc_builder(request):
@@ -166,12 +172,10 @@ def login_view(request):
 
     return render(request, 'auth/login.html', {'form': form})
 
-@login_required
 def logout_view(request):
     logout(request)
     return redirect('login')
 
-@login_required
 def signup_view(request):
     if request.user.is_authenticated:
         return redirect('landing')
@@ -190,3 +194,31 @@ def signup_view(request):
 
     return render(request, 'auth/signup.html', {'form': form})
 
+# ----------------- NEW: Profile Settings View -----------------
+@login_required
+def profile_settings(request):
+    # Ensure profile exists (signals should create it, but safe-check)
+    if not hasattr(request.user, 'profile'):
+        from .models import Profile
+        Profile.objects.get_or_create(user=request.user)
+
+    if request.method == 'POST':
+        u_form = UserUpdateForm(request.POST, instance=request.user)
+        p_form = ProfileUpdateForm(request.POST, request.FILES, instance=request.user.profile)
+
+        if u_form.is_valid() and p_form.is_valid():
+            u_form.save()
+            p_form.save()
+            messages.success(request, "Profile updated successfully.")
+            return redirect('profile-settings')
+        else:
+            messages.error(request, "Please correct the errors below.")
+    else:
+        u_form = UserUpdateForm(instance=request.user)
+        p_form = ProfileUpdateForm(instance=request.user.profile)
+
+    context = {
+        'u_form': u_form,
+        'p_form': p_form,
+    }
+    return render(request, 'profile/settings.html', context)

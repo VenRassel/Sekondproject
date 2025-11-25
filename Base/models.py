@@ -1,4 +1,6 @@
+# Base/models.py
 from django.db import models
+from django.contrib.auth.models import User
 
 CATEGORY_CHOICES = [
     ('ram', 'RAM'),
@@ -21,3 +23,18 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
+
+# --- Profile model for user profile settings ---
+ROLE_CHOICES = (
+    ('admin', 'Admin'),
+    ('staff', 'Staff'),
+    ('encoder', 'Encoder'),
+)
+
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    profile_picture = models.ImageField(upload_to='profiles/', blank=True, null=True)
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='staff')
+
+    def __str__(self):
+        return f"{self.user.username} Profile"
