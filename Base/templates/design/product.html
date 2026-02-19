@@ -1,171 +1,240 @@
-{% load static %}
+﻿{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Product Management</title>
-    <link rel="stylesheet" href="{% static 'css/product.css' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/ui.css' %}">
 </head>
 <body>
-    <div class="container">
-        <div class="back-button">
-            <a href="{% url 'landing' %}" class="btn-back">← Back to Home</a>
-        </div>
-        <h1>Product Management</h1>
-        
-        <!-- Messages -->
-        {% if messages %}
-        <div class="messages">
-            {% for message in messages %}
-            <div class="message {{ message.tags }}">
-                {{ message }}
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
-        
-        <!-- Add/Edit Product Form -->
-        <div class="form-section">
-            <h2>{% if editing_product %}Edit Product{% else %}Add New Product{% endif %}</h2>
-            <form method="POST" action="{% if editing_product %}{% url 'edit-product' editing_product.id %}{% else %}{% url 'add-product' %}{% endif %}">
-                {% csrf_token %}
-                <div class="form-group">
-                    <label for="name">Product Name *</label>
-                    <input type="text" id="name" name="name" required 
-                           value="{% if editing_product %}{{ editing_product.name }}{% endif %}"
-                           placeholder="Enter product name">
-                </div>
-                
-                <div class="form-group">
-                    <label for="description">Description</label>
-                    <textarea id="description" name="description" 
-                              placeholder="Enter product description">{% if editing_product %}{{ editing_product.description }}{% endif %}</textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label for="price">Price *</label>
-                    <input type="number" id="price" name="price" step="0.01" required 
-                           value="{% if editing_product %}{{ editing_product.price }}{% endif %}"
-                           placeholder="0.00">
-                </div>
-                
-                <div class="form-group">
-                    <label for="quantity">Quantity</label>
-                    <input type="number" id="quantity" name="quantity" 
-                           value="{% if editing_product %}{{ editing_product.quantity }}{% else %}0{% endif %}"
-                           placeholder="0">
-                </div>
-
-                <div class="form-group">
-                     <label for="category">Category</label>
-                     <select id="category" name="category" required>
-                     <option value="ram" {% if editing_product and editing_product.category == 'ram' %}selected{% endif %}>RAM</option>
-                     <option value="motherboard" {% if editing_product and editing_product.category == 'motherboard' %}selected{% endif %}>Motherboard</option>
-                     <option value="cpu" {% if editing_product and editing_product.category == 'cpu' %}selected{% endif %}>CPU</option>
-                     <option value="gpu" {% if editing_product and editing_product.category == 'gpu' %}selected{% endif %}>GPU</option>
-                     <option value="storage" {% if editing_product and editing_product.category == 'storage' %}selected{% endif %}>Storage</option>
-                     <option value="psu" {% if editing_product and editing_product.category == 'psu' %}selected{% endif %}>Power Supply</option>
-                     <option value="case" {% if editing_product and editing_product.category == 'case' %}selected{% endif %}>Case</option>
-                     </select>
-                </div>
-
-                
-                <button type="submit" class="btn btn-primary">
-                    {% if editing_product %}Update Product{% else %}Add Product{% endif %}
-                </button>
-                {% if editing_product %}
-                <a href="{% if request.GET.category %}
-                          /category/?category={{ request.GET.category }}
-                          {% else %}
-                         {% url 'product' %}
-                          {% endif %}
-                         " class="btn btn-cancel">Cancel</a>
+<div class="page">
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="brand">Inventory+</div>
+            <div class="profile-card">
+                {% if user.profile.profile_picture %}
+                    <img src="{{ user.profile.profile_picture.url }}" alt="Profile" class="avatar">
+                {% else %}
+                    <div class="avatar">{{ user.first_name|first|default:user.username|first|upper }}</div>
                 {% endif %}
-            </form>
-        </div>
-        
-        <!-- Products List -->
-        <div class="form-section">
-<h2>Product List</h2>
+                <div class="profile-meta">
+                    <h3>{% if user.first_name or user.last_name %}{{ user.first_name }} {{ user.last_name }}{% else %}{{ user.username }}{% endif %}</h3>
+                    <p title="{{ user.email|default:'No email' }}">{{ user.email|default:"No email" }}</p>
+                </div>
+            </div>
+            <ul class="nav-list">
+                <li><a href="{% url 'landing' %}">Dashboard <span>›</span></a></li>
+                <li><a class="active" href="{% url 'product' %}">Product Management <span>›</span></a></li>
+                <li><a href="{% url 'category' %}">Masterlist <span>›</span></a></li>
+                <li><a href="{% url 'pc-builder' %}">Price Quote <span>›</span></a></li>
+                <li><a href="{% url 'checkout-history' %}">Checkout History <span>›</span></a></li>
+                <li><a href="{% url 'profile-settings' %}">Profile Settings <span>›</span></a></li>
+                <li><a href="{% url 'logout' %}">Log out <span>›</span></a></li>
+            </ul>
+        </aside>
 
-<!-- SEARCH BAR (laging visible) -->
-<form method="GET" action="" class="search-form">
-    <input type="text" name="search" placeholder="Search product..."
-           value="{{ search_query }}" class="search-input">
-    <button type="submit" class="btn btn-primary">Search</button>
+        <main class="main-panel">
+        <section class="topbar">
+            <div class="actions">
+                <a href="{% url 'landing' %}" class="btn btn-ghost">Back to Home</a>
+                <a href="{% url 'category' %}" class="btn btn-ghost">Open Masterlist</a>
+            </div>
+            <h1 style="margin-top: 14px;">Product Management</h1>
+            <p>Add, edit, and monitor your catalog items.</p>
+        </section>
 
-    {% if search_query %}
-    <a href="{% url 'product' %}" class="btn btn-cancel">Clear</a>
-    {% endif %}
-</form>
-
-<!-- CATEGORY FILTER BUTTONS -->
-<div class="category-buttons">
-
-    <a href="?category=ram" class="btn btn-filter {% if category_filter == 'ram' %}active{% endif %}">RAM</a>
-
-    <a href="?category=motherboard" class="btn btn-filter {% if category_filter == 'motherboard' %}active{% endif %}">Motherboard</a>
-
-    <a href="?category=cpu" class="btn btn-filter {% if category_filter == 'cpu' %}active{% endif %}">CPU</a>
-
-    <a href="?category=gpu" class="btn btn-filter {% if category_filter == 'gpu' %}active{% endif %}">GPU</a>
-
-    <a href="?category=storage" class="btn btn-filter {% if category_filter == 'storage' %}active{% endif %}">Storage</a>
-
-    <a href="?category=psu" class="btn btn-filter {% if category_filter == 'psu' %}active{% endif %}">PSU</a>
-
-    <a href="?category=case" class="btn btn-filter {% if category_filter == 'case' %}active{% endif %}">Case</a>
-
-    <a href="{% url 'product' %}" class="btn btn-cancel">Clear</a>
-</div>
-
-
-<!-- TABLE HEADER (laging visible) -->
-<table class="products-table">
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Description</th>
-            <th>Category</th>
-            <th>Price</th>
-            <th>Quantity</th>
-            <th>Created</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-
-    <tbody>
-        {% if products %}
-            {% for product in products %}
-            <tr>
-                <td><strong>{{ product.name }}</strong></td>
-                <td>{{ product.description|default:"-" }}</td>
-                <td>{{ product.category|title }}</td>
-                <td>₱{{ product.price }}</td>
-                <td>{{ product.quantity }}</td>
-                <td>{{ product.created_at|date:"M d, Y" }}</td>
-                <td>
-                    <div class="action-buttons">
-                        <a href="{% url 'edit-product' product.id %}" class="btn btn-edit">Edit</a>
-                        <form method="POST" action="{% url 'delete-product' product.id %}" style="display: inline;">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-delete"
-                                onclick="return confirm('Are you sure you want to delete {{ product.name }}?')">
-                                Delete
-                            </button>
-                        </form>
-                    </div>
-                </td>
-            </tr>
+        {% if messages %}
+        <section class="alerts">
+            {% for message in messages %}
+            <div class="alert {{ message.tags }}">{{ message }}</div>
             {% endfor %}
-        {% else %}
-            <tr>
-                <td colspan="6" style="text-align:center; padding:20px;">
-                    No results found{% if search_query %} for "<strong>{{ search_query }}</strong>"{% endif %}.
-                </td>
-            </tr>
+        </section>
         {% endif %}
-    </tbody>
 
-</table>
+        <section class="content-grid">
+            <article class="card">
+                <h2 class="card-title">{% if editing_product %}Edit Product{% else %}Add Product{% endif %}</h2>
+                <form method="POST" action="{% if editing_product %}{% url 'edit-product' editing_product.id %}{% if search_query or category_filter %}?{% if search_query %}search={{ search_query }}{% endif %}{% if category_filter %}{% if search_query %}&{% endif %}category={{ category_filter }}{% endif %}{% endif %}{% else %}{% url 'add-product' %}{% endif %}" class="forms-grid">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="name">Product Name</label>
+                        <input type="text" id="name" name="name" required value="{% if editing_product %}{{ editing_product.name }}{% endif %}">
+                    </div>
+                    <div class="form-group">
+                        <label for="description">Description</label>
+                        <textarea id="description" name="description">{% if editing_product %}{{ editing_product.description }}{% endif %}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="price">Price</label>
+                        <input type="number" step="0.01" id="price" name="price" required value="{% if editing_product %}{{ editing_product.price }}{% endif %}">
+                    </div>
+                    <div class="form-group">
+                        <label for="quantity">Quantity</label>
+                        <input type="number" id="quantity" name="quantity" value="{% if editing_product %}{{ editing_product.quantity }}{% else %}0{% endif %}">
+                    </div>
+                    <div class="form-group">
+                        <label for="category">Category</label>
+                        <select id="category" name="category" required>
+                            <option value="ram" {% if editing_product and editing_product.category == 'ram' %}selected{% endif %}>RAM</option>
+                            <option value="motherboard" {% if editing_product and editing_product.category == 'motherboard' %}selected{% endif %}>Motherboard</option>
+                            <option value="cpu" {% if editing_product and editing_product.category == 'cpu' %}selected{% endif %}>CPU</option>
+                            <option value="gpu" {% if editing_product and editing_product.category == 'gpu' %}selected{% endif %}>GPU</option>
+                            <option value="storage" {% if editing_product and editing_product.category == 'storage' %}selected{% endif %}>Storage</option>
+                            <option value="psu" {% if editing_product and editing_product.category == 'psu' %}selected{% endif %}>Power Supply</option>
+                            <option value="case" {% if editing_product and editing_product.category == 'case' %}selected{% endif %}>Case</option>
+                        </select>
+                    </div>
+
+                    <div class="actions">
+                        <button type="submit" class="btn btn-primary">{% if editing_product %}Update Product{% else %}Add Product{% endif %}</button>
+                        {% if editing_product %}
+                        <a class="btn btn-ghost" href="{% if request.GET.category %}/category/?category={{ request.GET.category }}{% else %}{% url 'product' %}{% endif %}">Cancel</a>
+                        {% endif %}
+                    </div>
+                </form>
+            </article>
+
+            <article class="card">
+                <h2 class="card-title">Filters & Search</h2>
+                
+                <!-- Search Section -->
+                <form method="GET" class="forms-grid">
+                    <div class="form-group">
+                        <label for="search">Search Product</label>
+                        <input id="search" type="text" name="search" value="{{ search_query }}" placeholder="Type product name...">
+                    </div>
+                    
+                    <!-- Category Filter -->
+                    <div class="form-group">
+                        <label for="category">Category</label>
+                        <select id="category" name="category">
+                            <option value="">All Categories</option>
+                            <option value="ram" {% if category_filter == 'ram' %}selected{% endif %}>RAM</option>
+                            <option value="motherboard" {% if category_filter == 'motherboard' %}selected{% endif %}>Motherboard</option>
+                            <option value="cpu" {% if category_filter == 'cpu' %}selected{% endif %}>CPU</option>
+                            <option value="gpu" {% if category_filter == 'gpu' %}selected{% endif %}>GPU</option>
+                            <option value="storage" {% if category_filter == 'storage' %}selected{% endif %}>Storage</option>
+                            <option value="psu" {% if category_filter == 'psu' %}selected{% endif %}>Power Supply</option>
+                            <option value="case" {% if category_filter == 'case' %}selected{% endif %}>Case</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Price Range Filter -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group">
+                            <label for="min_price">Min Price</label>
+                            <input type="number" id="min_price" name="min_price" step="0.01" value="{{ min_price }}" placeholder="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label for="max_price">Max Price</label>
+                            <input type="number" id="max_price" name="max_price" step="0.01" value="{{ max_price }}" placeholder="Any">
+                        </div>
+                    </div>
+                    
+                    <!-- Stock Status Filter -->
+                    <div class="form-group">
+                        <label for="stock_status">Stock Status</label>
+                        <select id="stock_status" name="stock_status">
+                            <option value="">All Items</option>
+                            <option value="in_stock" {% if stock_status == 'in_stock' %}selected{% endif %}>In Stock</option>
+                            <option value="low_stock" {% if stock_status == 'low_stock' %}selected{% endif %}>Low Stock (≤5)</option>
+                            <option value="out_of_stock" {% if stock_status == 'out_of_stock' %}selected{% endif %}>Out of Stock</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Sort Option -->
+                    <div class="form-group">
+                        <label for="sort">Sort By</label>
+                        <select id="sort" name="sort">
+                            <option value="-created_at" {% if sort_by == '-created_at' %}selected{% endif %}>Newest First</option>
+                            <option value="created_at" {% if sort_by == 'created_at' %}selected{% endif %}>Oldest First</option>
+                            <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name (A-Z)</option>
+                            <option value="-name" {% if sort_by == '-name' %}selected{% endif %}>Name (Z-A)</option>
+                            <option value="-price" {% if sort_by == '-price' %}selected{% endif %}>Price (High to Low)</option>
+                            <option value="price" {% if sort_by == 'price' %}selected{% endif %}>Price (Low to High)</option>
+                            <option value="-quantity" {% if sort_by == '-quantity' %}selected{% endif %}>Quantity (Highest)</option>
+                            <option value="quantity" {% if sort_by == 'quantity' %}selected{% endif %}>Quantity (Lowest)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="actions">
+                        <button type="submit" class="btn btn-primary">Apply Filters</button>
+                        <a href="{% url 'product' %}" class="btn btn-ghost">Clear All</a>
+                    </div>
+                </form>
+            </article>
+        </section>
+
+        <section class="card">
+            <h2 class="card-title">Product List</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>Category</th>
+                            <th>Price</th>
+                            <th>Quantity</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                        <tr>
+                            <td><strong>{{ product.name }}</strong></td>
+                            <td>{{ product.description|default:"-" }}</td>
+                            <td>{{ product.category|title }}</td>
+                            <td><span class="text-success">PHP {{ product.price }}</span></td>
+                            <td>{{ product.quantity }}</td>
+                            <td>{{ product.created_at|date:"M d, Y" }}</td>
+                            <td>
+                                <div class="actions">
+                                    <a href="{% url 'edit-product' product.id %}{% if search_query or category_filter %}?{% if search_query %}search={{ search_query }}{% endif %}{% if category_filter %}{% if search_query %}&{% endif %}category={{ category_filter }}{% endif %}{% endif %}" class="btn btn-ghost">Edit</a>
+                                    <form method="POST" action="{% url 'delete-product' product.id %}" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete {{ product.name }}?')">Delete</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="muted">No results found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        </main>
+    </div>
+</div>
+</body>
+</html>
+
+<script>
+// Confirm before logging out
+(function(){
+    try{
+        var logoutUrl = "{% url 'logout' %}";
+        document.addEventListener('click', function(e){
+            var a = e.target.closest && e.target.closest('a');
+            if(!a) return;
+            var href = a.getAttribute('href');
+            if(!href) return;
+            if(href === logoutUrl){
+                e.preventDefault();
+                if(confirm('Are you sure you want to log out?')){
+                    window.location.href = logoutUrl;
+                }
+            }
+        });
+    }catch(err){console && console.error && console.error(err)}
+})();
+</script>

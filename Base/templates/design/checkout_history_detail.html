@@ -1,0 +1,174 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout Detail</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/ui.css' %}">
+</head>
+<body>
+<div class="page">
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="brand">Inventory+</div>
+            <div class="profile-card">
+                {% if user.profile.profile_picture %}
+                    <img src="{{ user.profile.profile_picture.url }}" alt="Profile" class="avatar">
+                {% else %}
+                    <div class="avatar">{{ user.first_name|first|default:user.username|first|upper }}</div>
+                {% endif %}
+                <div class="profile-meta">
+                    <h3>{% if user.first_name or user.last_name %}{{ user.first_name }} {{ user.last_name }}{% else %}{{ user.username }}{% endif %}</h3>
+                    <p title="{{ user.email|default:'No email' }}">{{ user.email|default:"No email" }}</p>
+                </div>
+            </div>
+            <ul class="nav-list">
+                <li><a href="{% url 'landing' %}">Dashboard <span>›</span></a></li>
+                <li><a href="{% url 'product' %}">Product Management <span>›</span></a></li>
+                <li><a href="{% url 'category' %}">Masterlist <span>›</span></a></li>
+                <li><a href="{% url 'pc-builder' %}">Price Quote <span>›</span></a></li>
+                <li><a class="active" href="{% url 'checkout-history' %}">Checkout History <span>›</span></a></li>
+                <li><a href="{% url 'profile-settings' %}">Profile Settings <span>›</span></a></li>
+                <li><a href="{% url 'logout' %}">Log out <span>›</span></a></li>
+            </ul>
+        </aside>
+
+        <main class="main-panel">
+            <section class="topbar">
+                <div class="actions">
+                    <a class="btn btn-ghost" href="{% url 'checkout-history' %}">Back to History</a>
+                    <a class="btn btn-ghost" href="{% url 'pc-builder' %}">Back to PC Builder</a>
+                </div>
+                <h1 style="margin-top: 14px;">Checkout Build #{{ build.id }}</h1>
+                <p>View details of this PC build checkout.</p>
+            </section>
+
+            <section class="card">
+                <h2 class="card-title">Build Information</h2>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+                    <div>
+                        <p style="margin: 0 0 4px; font-size: 12px; color: var(--text-muted); font-weight: 600;">User</p>
+                        <p style="margin: 0; font-size: 16px; font-weight: 600;">{{ build.user.username }}</p>
+                    </div>
+                    <div>
+                        <p style="margin: 0 0 4px; font-size: 12px; color: var(--text-muted); font-weight: 600;">Status</p>
+                        <p style="margin: 0; font-size: 16px; font-weight: 600;">{{ build.status|title }}</p>
+                    </div>
+                    <div>
+                        <p style="margin: 0 0 4px; font-size: 12px; color: var(--text-muted); font-weight: 600;">Date</p>
+                        <p style="margin: 0; font-size: 16px; font-weight: 600;">{{ build.created_at|date:"M d, Y h:i A" }}</p>
+                    </div>
+                    <div>
+                        <p style="margin: 0 0 4px; font-size: 12px; color: var(--text-muted); font-weight: 600;">Total Items</p>
+                        <p style="margin: 0; font-size: 16px; font-weight: 600;">{{ build.items.count }}</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Quick Summary -->
+            <section class="metric-grid">
+                <article class="metric">
+                    <span class="muted">Total Price</span>
+                    <strong style="color: var(--success);">PHP {{ build.total_price }}</strong>
+                </article>
+                <article class="metric">
+                    <span class="muted">Items Checked Out</span>
+                    <strong>{{ build.items.count }}</strong>
+                </article>
+                <article class="metric">
+                    <span class="muted">Average Item Price</span>
+                    <strong>PHP {{ avg_item_price|floatformat:2 }}</strong>
+                </article>
+            </section>
+
+            <section class="card">
+                <h2 class="card-title">Checked Out Items</h2>
+                {% if build.items.all %}
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Quantity</th>
+                                <th>Price At Checkout</th>
+                                <th>Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in build.items.all %}
+                            <tr>
+                                <td><strong>{{ item.product.name }}</strong></td>
+                                <td>{{ item.quantity }}</td>
+                                <td>PHP {{ item.price_at_time }}</td>
+                                <td>PHP {{ item.subtotal }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="muted">No items found.</p>
+                {% endif %}
+            </section>
+
+            <section class="card">
+                <h2 class="card-title">Stock Movement Log</h2>
+                {% if stock_movements %}
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Product</th>
+                                <th>Change</th>
+                                <th>Reason</th>
+                                <th>By</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for move in stock_movements %}
+                            <tr>
+                                <td>{{ move.created_at|date:"M d, Y h:i A" }}</td>
+                                <td><strong>{{ move.product.name }}</strong></td>
+                                <td>{{ move.quantity_change }}</td>
+                                <td>{{ move.get_reason_display }}</td>
+                                <td>{% if move.changed_by %}{{ move.changed_by.username }}{% else %}<span class="muted">-</span>{% endif %}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="muted">No stock movement records for this build.</p>
+                {% endif %}
+            </section>
+        </main>
+    </div>
+</div>
+</body>
+</html>
+
+<script>
+// Confirm before logging out
+(function(){
+    try{
+        var logoutUrl = "{% url 'logout' %}";
+        document.addEventListener('click', function(e){
+            var a = e.target.closest && e.target.closest('a');
+            if(!a) return;
+            var href = a.getAttribute('href');
+            if(!href) return;
+            if(href === logoutUrl){
+                e.preventDefault();
+                if(confirm('Are you sure you want to log out?')){
+                    window.location.href = logoutUrl;
+                }
+            }
+        });
+    }catch(err){console && console.error && console.error(err)}
+})();
+</script>

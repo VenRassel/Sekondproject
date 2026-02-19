@@ -17,4 +17,9 @@ urlpatterns = [
 
     # PROFILE SETTINGS
     path('profile/settings/', views.profile_settings, name='profile-settings'),
+
+    path('pc-builder/checkout/', views.checkout_pc_build, name='checkout_pc_build'),
+    path('pc-builder/history/', views.checkout_history, name='checkout-history'),
+    path('pc-builder/history/<int:build_id>/', views.checkout_history_detail, name='checkout-history-detail'),
+
 ]

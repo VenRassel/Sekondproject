@@ -1,58 +1,121 @@
+﻿{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Landing Page</title>
+    <title>Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/ui.css' %}">
 </head>
 <body>
-    <div class="header">
-        <h1>Inventory System</h1>
-    </div>
-
-    <div class="container">
-
-        <div class="sidebar">
-            <ul>
-                <li><a href="">Home</a></li>
-                <li><a href="product">Product Management</a></li>
-                <li><a href="category">Masterlist</a></li>
-                <li><a href="pc_builder">Price quote</a></li>
-                <li><a href="{% url 'logout' %}">Log out</a></li>
-            </ul>
-        </div>
-
-        <div class="form-section">
-            <h2>Product List</h2>
-            {% if products %}
-            <table class="products-table">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Description</th>
-                        <th>Price</th>
-                        <th>Quantity</th>
-                        <th>Created</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for product in products %}
-                    <tr>
-                        <td><strong>{{ product.name }}</strong></td>
-                        <td>{{ product.description|default:"-" }}</td>
-                        <td>₱{{ product.price }}</td>
-                        <td>{{ product.quantity }}</td>
-                        <td>{{ product.created_at|date:"M d, Y" }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-            <div class="empty-state">
-                <p>No products yet. Add your first product above! 🎉</p>
+<div class="page">
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="brand">Inventory+</div>
+            <div class="profile-card">
+                {% if user.profile.profile_picture %}
+                    <img src="{{ user.profile.profile_picture.url }}" alt="Profile" class="avatar">
+                {% else %}
+                    <div class="avatar">{{ user.first_name|first|default:user.username|first|upper }}</div>
+                {% endif %}
+                <div class="profile-meta">
+                    <h3>{% if user.first_name or user.last_name %}{{ user.first_name }} {{ user.last_name }}{% else %}{{ user.username }}{% endif %}</h3>
+                    <p title="{{ user.email|default:'No email' }}">{{ user.email|default:"No email" }}</p>
+                </div>
             </div>
-            {% endif %}
-        </div>
+            <ul class="nav-list">
+                <li><a class="active" href="{% url 'landing' %}">Dashboard <span>›</span></a></li>
+                <li><a href="{% url 'product' %}">Product Management <span>›</span></a></li>
+                <li><a href="{% url 'category' %}">Masterlist <span>›</span></a></li>
+                <li><a href="{% url 'pc-builder' %}">Price Quote <span>›</span></a></li>
+                <li><a href="{% url 'checkout-history' %}">Checkout History <span>›</span></a></li>
+                <li><a href="{% url 'profile-settings' %}">Profile Settings <span>›</span></a></li>
+                <li><a href="{% url 'logout' %}">Log out <span>›</span></a></li>
+            </ul>
+        </aside>
+
+        <main class="main-panel">
+            <section class="topbar">
+                <p>Hello {{ user.username }}, welcome back.</p>
+                <h1>Your Inventory Dashboard</h1>
+                <p>Track stocks, build quotes, and check checkout history in one workspace.</p>
+            </section>
+
+            <section class="metric-grid">
+                <article class="metric">
+                    <span class="muted">Total Products</span>
+                    <strong>{{ products|length }}</strong>
+                </article>
+                <article class="metric">
+                    <span class="muted">Available Categories</span>
+                    <strong>7</strong>
+                </article>
+                <article class="metric">
+                    <span class="muted">Current User</span>
+                    <strong>{{ user.username }}</strong>
+                </article>
+            </section>
+
+            <section class="card">
+                <div class="actions" style="margin-bottom:12px;">
+                    <a class="btn btn-primary" href="{% url 'product' %}">Manage Products</a>
+                    <a class="btn btn-ghost" href="{% url 'pc-builder' %}">Open PC Builder</a>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Description</th>
+                                <th>Price</th>
+                                <th>Quantity</th>
+                                <th>Created</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in products %}
+                            <tr>
+                                <td><strong>{{ product.name }}</strong></td>
+                                <td>{{ product.description|default:"-" }}</td>
+                                <td><span class="text-success">PHP {{ product.price }}</span></td>
+                                <td>{{ product.quantity }}</td>
+                                <td>{{ product.created_at|date:"M d, Y" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="muted">No products yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
     </div>
+</div>
 </body>
 </html>
+
+<script>
+// Confirm before logging out on pages that don't extend layout.html
+(function(){
+    try{
+        var logoutUrl = "{% url 'logout' %}";
+        document.addEventListener('click', function(e){
+            var a = e.target.closest && e.target.closest('a');
+            if(!a) return;
+            var href = a.getAttribute('href');
+            if(!href) return;
+            if(href === logoutUrl){
+                e.preventDefault();
+                if(confirm('Are you sure you want to log out?')){
+                    window.location.href = logoutUrl;
+                }
+            }
+        });
+    }catch(err){console && console.error && console.error(err)}
+})();
+</script>

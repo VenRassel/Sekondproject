@@ -1,0 +1,130 @@
+﻿{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout History</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/ui.css' %}">
+</head>
+<body>
+<div class="page">
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="brand">Inventory+</div>
+            <div class="profile-card">
+                {% if user.profile.profile_picture %}
+                    <img src="{{ user.profile.profile_picture.url }}" alt="Profile" class="avatar">
+                {% else %}
+                    <div class="avatar">{{ user.first_name|first|default:user.username|first|upper }}</div>
+                {% endif %}
+                <div class="profile-meta">
+                    <h3>{% if user.first_name or user.last_name %}{{ user.first_name }} {{ user.last_name }}{% else %}{{ user.username }}{% endif %}</h3>
+                    <p title="{{ user.email|default:'No email' }}">{{ user.email|default:"No email" }}</p>
+                </div>
+            </div>
+            <ul class="nav-list">
+                <li><a href="{% url 'landing' %}">Dashboard <span>›</span></a></li>
+                <li><a href="{% url 'product' %}">Product Management <span>›</span></a></li>
+                <li><a href="{% url 'category' %}">Masterlist <span>›</span></a></li>
+                <li><a href="{% url 'pc-builder' %}">Price Quote <span>›</span></a></li>
+                <li><a class="active" href="{% url 'checkout-history' %}">Checkout History <span>›</span></a></li>
+                <li><a href="{% url 'profile-settings' %}">Profile Settings <span>›</span></a></li>
+                <li><a href="{% url 'logout' %}">Log out <span>›</span></a></li>
+            </ul>
+        </aside>
+
+        <main class="main-panel">
+        <section class="topbar">
+            <div class="actions">
+                <a class="btn btn-ghost" href="{% url 'landing' %}">Back to Home</a>
+                <a class="btn btn-ghost" href="{% url 'pc-builder' %}">Back to PC Builder</a>
+            </div>
+            <h1 style="margin-top: 14px;">Checkout History</h1>
+            <p>All checked out builds and performance analytics.</p>
+        </section>
+
+        <!-- Analytics Section -->
+        <section class="metric-grid">
+            <article class="metric">
+                <span class="muted">Total Builds</span>
+                <strong>{{ total_builds }}</strong>
+            </article>
+            <article class="metric">
+                <span class="muted">Total Revenue</span>
+                <strong style="color: var(--success);">PHP {{ total_revenue|floatformat:2 }}</strong>
+            </article>
+            <article class="metric">
+                <span class="muted">Average Order Value</span>
+                <strong>PHP {{ avg_order_value|floatformat:2 }}</strong>
+            </article>
+            {% if most_popular_item %}
+            <article class="metric">
+                <span class="muted">Most Popular Item</span>
+                <strong>{{ most_popular_item }}</strong>
+                <small style="color: var(--text-muted); margin-top: 6px;">ordered {{ most_popular_count }} time{{ most_popular_count|pluralize }}</small>
+            </article>
+            {% endif %}
+        </section>
+
+        <section class="card">
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Build ID</th>
+                            <th>User</th>
+                            <th>Items</th>
+                            <th>Total</th>
+                            <th>Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for build in builds %}
+                        <tr>
+                            <td>#{{ build.id }}</td>
+                            <td>{{ build.user.username }}</td>
+                            <td>{{ build.item_count }}</td>
+                            <td>PHP {{ build.total_price }}</td>
+                            <td>{{ build.created_at|date:"M d, Y h:i A" }}</td>
+                            <td><a class="btn btn-ghost" href="{% url 'checkout-history-detail' build.id %}">View Details</a></td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="muted">No checkout records yet.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        </main>
+    </div>
+</div>
+</body>
+</html>
+
+<script>
+// Confirm before logging out
+(function(){
+    try{
+        var logoutUrl = "{% url 'logout' %}";
+        document.addEventListener('click', function(e){
+            var a = e.target.closest && e.target.closest('a');
+            if(!a) return;
+            var href = a.getAttribute('href');
+            if(!href) return;
+            if(href === logoutUrl){
+                e.preventDefault();
+                if(confirm('Are you sure you want to log out?')){
+                    window.location.href = logoutUrl;
+                }
+            }
+        });
+    }catch(err){console && console.error && console.error(err)}
+})();
+</script>

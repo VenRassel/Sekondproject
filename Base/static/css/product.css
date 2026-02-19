@@ -77,14 +77,43 @@
             background: #28a745;
             color: white;
             border: 1px solid #28a745;
-            padding: 5px 10px;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-edit:hover {
+            background: #218838;
+            border-color: #1e7e34;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
         }
         
         .btn-delete {
             background: #dc3545;
             color: white;
             border: 1px solid #dc3545;
-            padding: 5px 10px;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .btn-delete:hover {
+            background: #c82333;
+            border-color: #bd2130;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
+        }
+        
+        .btn-delete:active {
+            transform: translateY(0);
         }
         
         .btn-cancel {
@@ -127,12 +156,19 @@
         }
         
         .action-buttons {
-            display: inline-block;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            justify-content: center;
         }
         
         .action-buttons form {
-            display: inline;
-            margin-left: 5px;
+            display: inline-block;
+            margin: 0;
+        }
+        
+        .action-buttons .btn {
+            margin: 0;
         }
         
         .empty-state {

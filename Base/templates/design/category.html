@@ -1,104 +1,126 @@
-{% load static %}
+﻿{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Masterlist</title>
-    <link rel="stylesheet" href="{% static 'css/product.css' %}">
-
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/ui.css' %}">
 </head>
-
 <body>
-    <div class="container">
-        <div class="back-button">
-            <a href="{% url 'landing' %}" class="btn-back">← Back to Home</a>
-        </div>
-        <h1>Masterlist</h1>
+<div class="page">
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="brand">Inventory+</div>
+            <div class="profile-card">
+                {% if user.profile.profile_picture %}
+                    <img src="{{ user.profile.profile_picture.url }}" alt="Profile" class="avatar">
+                {% else %}
+                    <div class="avatar">{{ user.first_name|first|default:user.username|first|upper }}</div>
+                {% endif %}
+                <div class="profile-meta">
+                    <h3>{% if user.first_name or user.last_name %}{{ user.first_name }} {{ user.last_name }}{% else %}{{ user.username }}{% endif %}</h3>
+                    <p title="{{ user.email|default:'No email' }}">{{ user.email|default:"No email" }}</p>
+                </div>
+            </div>
+            <ul class="nav-list">
+                <li><a href="{% url 'landing' %}">Dashboard <span>›</span></a></li>
+                <li><a href="{% url 'product' %}">Product Management <span>›</span></a></li>
+                <li><a class="active" href="{% url 'category' %}">Masterlist <span>›</span></a></li>
+                <li><a href="{% url 'pc-builder' %}">Price Quote <span>›</span></a></li>
+                <li><a href="{% url 'checkout-history' %}">Checkout History <span>›</span></a></li>
+                <li><a href="{% url 'profile-settings' %}">Profile Settings <span>›</span></a></li>
+                <li><a href="{% url 'logout' %}">Log out <span>›</span></a></li>
+            </ul>
+        </aside>
 
-<!-- SEARCH BAR (laging visible) -->
-<form method="GET" action="" class="search-form">
-    <input type="text" name="search" placeholder="Search product..."
-           value="{{ search_query }}" class="search-input">
-    <button type="submit" class="btn btn-primary">Search</button>
+        <main class="main-panel">
+        <section class="topbar">
+            <div class="actions">
+                <a href="{% url 'landing' %}" class="btn btn-ghost">Back to Home</a>
+                <a href="{% url 'product' %}" class="btn btn-ghost">Product Management</a>
+            </div>
+            <h1 style="margin-top: 14px;">Masterlist</h1>
+            <p>Browse products by category and perform quick actions.</p>
+        </section>
 
-    {% if search_query %}
-    <a href="{% url 'product' %}" class="btn btn-cancel">Clear</a>
-    {% endif %}
-</form>
+        <section class="card">
+            <div class="actions" style="margin-bottom: 12px;">
+                <a href="?category=ram" class="btn {% if category_filter == 'ram' %}btn-primary{% else %}btn-ghost{% endif %}">RAM</a>
+                <a href="?category=motherboard" class="btn {% if category_filter == 'motherboard' %}btn-primary{% else %}btn-ghost{% endif %}">Motherboard</a>
+                <a href="?category=cpu" class="btn {% if category_filter == 'cpu' %}btn-primary{% else %}btn-ghost{% endif %}">CPU</a>
+                <a href="?category=gpu" class="btn {% if category_filter == 'gpu' %}btn-primary{% else %}btn-ghost{% endif %}">GPU</a>
+                <a href="?category=storage" class="btn {% if category_filter == 'storage' %}btn-primary{% else %}btn-ghost{% endif %}">Storage</a>
+                <a href="?category=psu" class="btn {% if category_filter == 'psu' %}btn-primary{% else %}btn-ghost{% endif %}">PSU</a>
+                <a href="?category=case" class="btn {% if category_filter == 'case' %}btn-primary{% else %}btn-ghost{% endif %}">Case</a>
+                <a href="{% url 'category' %}" class="btn btn-ghost">Clear</a>
+            </div>
 
-<!-- CATEGORY FILTER BUTTONS -->
-<div class="category-buttons">
-
-    <a href="?category=ram" class="btn btn-filter {% if category_filter == 'ram' %}active{% endif %}">RAM</a>
-
-    <a href="?category=motherboard" class="btn btn-filter {% if category_filter == 'motherboard' %}active{% endif %}">Motherboard</a>
-
-    <a href="?category=cpu" class="btn btn-filter {% if category_filter == 'cpu' %}active{% endif %}">CPU</a>
-
-    <a href="?category=gpu" class="btn btn-filter {% if category_filter == 'gpu' %}active{% endif %}">GPU</a>
-
-    <a href="?category=storage" class="btn btn-filter {% if category_filter == 'storage' %}active{% endif %}">Storage</a>
-
-    <a href="?category=psu" class="btn btn-filter {% if category_filter == 'psu' %}active{% endif %}">PSU</a>
-
-    <a href="?category=case" class="btn btn-filter {% if category_filter == 'case' %}active{% endif %}">Case</a>
-
-    <a href="{% url 'product' %}" class="btn btn-cancel">Clear</a>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>Category</th>
+                            <th>Price</th>
+                            <th>Quantity</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                        <tr>
+                            <td><strong>{{ product.name }}</strong></td>
+                            <td>{{ product.description|default:"-" }}</td>
+                            <td>{{ product.category|title }}</td>
+                            <td><span class="text-success">PHP {{ product.price }}</span></td>
+                            <td>{{ product.quantity }}</td>
+                            <td>
+                                <div class="actions">
+                                    <a href="{% url 'edit-product' product.id %}?category={{ category_filter }}" class="btn btn-ghost">Edit</a>
+                                    <form method="POST" action="{% url 'delete-product' product.id %}?category={{ category_filter }}" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-danger" onclick="return confirm('Delete {{ product.name }}?')">Delete</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="muted">No products found{% if category_filter %} in {{ category_filter|title }}{% endif %}.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        </main>
+    </div>
 </div>
+</body>
+</html>
 
-        <!-- Products Table -->
-<table class="products-table">
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Description</th>
-            <th>Category</th>
-            <th>Price</th>
-            <th>Quantity</th>
-            <th>Actions</th>  <!-- NEW -->
-        </tr>
-    </thead>
-
-    <tbody>
-        {% if products %}
-            {% for product in products %}
-            <tr>
-                <td><strong>{{ product.name }}</strong></td>
-                <td>{{ product.description|default:"-" }}</td>
-                <td>{{ product.category|title }}</td>
-                <td>₱{{ product.price }}</td>
-                <td>{{ product.quantity }}</td>
-                <td>
-                    <div class="action-buttons">
-
-                        <a href="{% url 'edit-product' product.id %}?category={{ category_filter }}" 
-                           class="btn btn-edit">Edit</a>
-
-                        <form method="POST" 
-                              action="{% url 'delete-product' product.id %}?category={{ category_filter }}" 
-                              style="display:inline;">
-                            {% csrf_token %}
-                            <button type="submit" 
-                                    class="btn btn-delete"
-                                    onclick="return confirm('Delete {{ product.name }}?')">
-                                Delete
-                            </button>
-                        </form>
-
-                    </div>
-                </td>
-            </tr>
-            {% endfor %}
-        {% else %}
-            <tr>
-                <td colspan="6" style="text-align:center; padding:20px;">
-                    No products found
-                    {% if category_filter %}
-                        in <strong>{{ category_filter|title }}</strong>
-                    {% endif %}.
-                </td>
-            </tr>
-        {% endif %}
-    </tbody>
-</table>
+<script>
+// Confirm before logging out
+(function(){
+    try{
+        var logoutUrl = "{% url 'logout' %}";
+        document.addEventListener('click', function(e){
+            var a = e.target.closest && e.target.closest('a');
+            if(!a) return;
+            var href = a.getAttribute('href');
+            if(!href) return;
+            if(href === logoutUrl){
+                e.preventDefault();
+                if(confirm('Are you sure you want to log out?')){
+                    window.location.href = logoutUrl;
+                }
+            }
+        });
+    }catch(err){console && console.error && console.error(err)}
+})();
+</script>

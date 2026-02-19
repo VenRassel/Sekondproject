@@ -1,0 +1,173 @@
+/* General Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    background: #f8f9fa;
+    padding: 20px;
+}
+
+/* Header */
+.header {
+    background: white;
+    padding: 20px;
+    border: 1px solid #ddd;
+    text-align: center;
+}
+
+.header h1 {
+    font-size: 32px;
+    color: #007bff;
+}
+
+/* Layout Container */
+.container {
+    display: flex;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 220px;
+    background: white;
+    border: 1px solid #ddd;
+    padding: 20px;
+    height: 700px;
+    overflow-y: auto;
+}
+
+/* Profile Section */
+.profile-section {
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.profile-picture-container {
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.profile-picture {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #007bff;
+    display: block;
+    margin: 0 auto;
+}
+
+.profile-picture-placeholder {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: #007bff;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    font-size: 32px;
+    font-weight: bold;
+    border: 3px solid #007bff;
+}
+
+.profile-info {
+    text-align: center;
+}
+
+.profile-name {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+    word-wrap: break-word;
+}
+
+.profile-email {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 10px;
+    word-wrap: break-word;
+}
+
+.profile-edit-link {
+    display: inline-block;
+    font-size: 12px;
+    color: #007bff;
+    text-decoration: none;
+    padding: 5px 10px;
+    border: 1px solid #007bff;
+    border-radius: 4px;
+    transition: all 0.3s;
+}
+
+.profile-edit-link:hover {
+    background: #007bff;
+    color: white;
+}
+
+.sidebar ul {
+    list-style: none;
+    margin-top: 10px;
+}
+
+.sidebar li {
+    margin-bottom: 15px;
+}
+
+.sidebar a {
+    text-decoration: none;
+    color: #007bff;
+    font-weight: bold;
+}
+
+.sidebar a:hover {
+    opacity: 0.8;
+}
+
+/* Form Section */
+.form-section {
+    flex-grow: 1;
+    background: #f8f9fa;
+    padding: 20px;
+    border: 1px solid #ddd;
+}
+
+.form-section h2 {
+    margin-bottom: 15px;
+    color: #007bff;
+}
+
+/* Table Styles (same as product.css) */
+.products-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.products-table th,
+.products-table td {
+    padding: 10px;
+    text-align: left;
+    border: 1px solid #ddd;
+}
+
+.products-table th {
+    background: #007bff;
+    color: white;
+}
+
+/* Empty State */
+.empty-state {
+    padding: 40px;
+    text-align: center;
+    color: #555;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}

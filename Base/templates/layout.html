@@ -1,22 +1,40 @@
+﻿{% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Inventory{% endblock %}</title>
-    <style>
-        body { font-family: Arial; background:#f5f5f5; margin:0; padding:40px; }
-        .card { background:white; padding:25px; max-width:800px; margin:auto;
-                border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.1); }
-        input, button {
-            width:100%; padding:10px; margin-top:10px; border-radius:5px;
-            border:1px solid #ddd;
-        }
-        button { background:#007bff; color:white; border:none; cursor:pointer; }
-        button:hover { background:#0056b3; }
-        .center { text-align:center; margin-top:15px; }
-        a { text-decoration:none; color:#007bff; }
-        .error { color:red; margin-top:10px; }
-    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/ui.css' %}">
+    {% block extra_head %}{% endblock %}
 </head>
-    {% block content %}{% endblock %}
+<body>
+{% block content %}{% endblock %}
 </body>
 </html>
+
+<script>
+// Site-wide logout confirmation. Intercepts clicks on the logout URL.
+(function () {
+    try {
+        var logoutUrl = "{% url 'logout' %}";
+        document.addEventListener('click', function (e) {
+            var a = e.target.closest && e.target.closest('a');
+            if (!a) return;
+            var href = a.getAttribute('href');
+            if (!href) return;
+            if (href === logoutUrl) {
+                e.preventDefault();
+                if (confirm('Are you sure you want to log out?')) {
+                    window.location.href = logoutUrl;
+                }
+            }
+        });
+    } catch (err) {
+        console && console.error && console.error(err);
+    }
+})();
+</script>

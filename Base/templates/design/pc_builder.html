@@ -1,102 +1,301 @@
-{% load static %}
+﻿{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PC Builder</title>
-    <link rel="stylesheet" href="{% static 'css/pc_builder.css' %}">
-
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/ui.css' %}">
 </head>
 <body>
-    <div class="container">
-        <div class="back-button">
-            <a href="{% url 'landing' %}" class="btn-back">← Back to Home</a>
-        </div>
-<div class="box">
-    <h2>PC Builder</h2>
+<div class="page">
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="brand">Inventory+</div>
+            <div class="profile-card">
+                {% if user.profile.profile_picture %}
+                    <img src="{{ user.profile.profile_picture.url }}" alt="Profile" class="avatar">
+                {% else %}
+                    <div class="avatar">{{ user.first_name|first|default:user.username|first|upper }}</div>
+                {% endif %}
+                <div class="profile-meta">
+                    <h3>{% if user.first_name or user.last_name %}{{ user.first_name }} {{ user.last_name }}{% else %}{{ user.username }}{% endif %}</h3>
+                    <p title="{{ user.email|default:'No email' }}">{{ user.email|default:"No email" }}</p>
+                </div>
+            </div>
+            <ul class="nav-list">
+                <li><a href="{% url 'landing' %}">Dashboard <span>›</span></a></li>
+                <li><a href="{% url 'product' %}">Product Management <span>›</span></a></li>
+                <li><a href="{% url 'category' %}">Masterlist <span>›</span></a></li>
+                <li><a class="active" href="{% url 'pc-builder' %}">Price Quote <span>›</span></a></li>
+                <li><a href="{% url 'checkout-history' %}">Checkout History <span>›</span></a></li>
+                <li><a href="{% url 'profile-settings' %}">Profile Settings <span>›</span></a></li>
+                <li><a href="{% url 'logout' %}">Log out <span>›</span></a></li>
+            </ul>
+        </aside>
 
-    <!-- RAM -->
-    <label>Choose RAM</label>
-    <select id="ram" onchange="calculateTotal()">
-        <option value="0">-- Select RAM --</option>
-        {% for p in ram %}
-        <option value="{{ p.price }}">{{ p.name }} (₱{{ p.price }})</option>
-        {% endfor %}
-    </select>
+        <main class="main-panel">
+            <section class="topbar">
+            <div class="actions">
+                <a href="{% url 'landing' %}" class="btn btn-ghost">Back to Home</a>
+                <a href="{% url 'checkout-history' %}" class="btn btn-ghost">Checkout History</a>
+            </div>
+            <h1 style="margin-top: 14px;">PC Builder</h1>
+            <p>Create a quote by selecting parts and quantities by category.</p>
+        </section>
 
-    <!-- Motherboard -->
-    <label>Choose Motherboard</label>
-    <select id="motherboard" onchange="calculateTotal()">
-        <option value="0">-- Select Motherboard --</option>
-        {% for p in motherboard %}
-        <option value="{{ p.price }}">{{ p.name }} (₱{{ p.price }})</option>
-        {% endfor %}
-    </select>
+        <section class="card">
+            <form method="post" action="{% url 'checkout_pc_build' %}">
+                {% csrf_token %}
+                <input type="hidden" name="build_items" id="build-items-input" value="[]">
 
-    <!-- CPU -->
-    <label>Choose CPU</label>
-    <select id="cpu" onchange="calculateTotal()">
-        <option value="0">-- Select CPU --</option>
-        {% for p in cpu %}
-        <option value="{{ p.price }}">{{ p.name }} (₱{{ p.price }})</option>
-        {% endfor %}
-    </select>
+                <div class="forms-grid">
+                    <label>Choose RAM</label>
+                    <div class="part-container" data-type="ram">
+                        <div class="part-row">
+                            <select class="part-select" onchange="handleSelect(this)">
+                                <option value="0">-- Select RAM --</option>
+                                {% for p in ram %}
+                                <option value="{{ p.id }}" data-price="{{ p.price }}" data-stock="{{ p.quantity }}" {% if p.quantity <= 0 %}disabled{% endif %}>
+                                    {{ p.name }} (PHP {{ p.price }}){% if p.quantity <= 0 %} - Out of stock{% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <input type="number" class="part-qty" min="1" value="1" disabled onchange="calculateTotal()">
+                        </div>
+                    </div>
 
-    <!-- GPU -->
-    <label>Choose GPU</label>
-    <select id="gpu" onchange="calculateTotal()">
-        <option value="0">-- Select GPU --</option>
-        {% for p in gpu %}
-        <option value="{{ p.price }}">{{ p.name }} (₱{{ p.price }})</option>
-        {% endfor %}
-    </select>
+                    <label>Choose Motherboard</label>
+                    <div class="part-container" data-type="motherboard">
+                        <div class="part-row">
+                            <select class="part-select" onchange="handleSelect(this)">
+                                <option value="0">-- Select Motherboard --</option>
+                                {% for p in motherboard %}
+                                <option value="{{ p.id }}" data-price="{{ p.price }}" data-stock="{{ p.quantity }}" {% if p.quantity <= 0 %}disabled{% endif %}>
+                                    {{ p.name }} (PHP {{ p.price }}){% if p.quantity <= 0 %} - Out of stock{% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <input type="number" class="part-qty" min="1" value="1" disabled onchange="calculateTotal()">
+                        </div>
+                    </div>
 
-    <!-- Storage -->
-    <label>Choose Storage</label>
-    <select id="storage" onchange="calculateTotal()">
-        <option value="0">-- Select Storage --</option>
-        {% for p in storage %}
-        <option value="{{ p.price }}">{{ p.name }} (₱{{ p.price }})</option>
-        {% endfor %}
-    </select>
+                    <label>Choose CPU</label>
+                    <div class="part-container" data-type="cpu">
+                        <div class="part-row">
+                            <select class="part-select" onchange="handleSelect(this)">
+                                <option value="0">-- Select CPU --</option>
+                                {% for p in cpu %}
+                                <option value="{{ p.id }}" data-price="{{ p.price }}" data-stock="{{ p.quantity }}" {% if p.quantity <= 0 %}disabled{% endif %}>
+                                    {{ p.name }} (PHP {{ p.price }}){% if p.quantity <= 0 %} - Out of stock{% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <input type="number" class="part-qty" min="1" value="1" disabled onchange="calculateTotal()">
+                        </div>
+                    </div>
 
-    <!-- PSU -->
-    <label>Choose Power Supply</label>
-    <select id="psu" onchange="calculateTotal()">
-        <option value="0">-- Select PSU --</option>
-        {% for p in psu %}
-        <option value="{{ p.price }}">{{ p.name }} (₱{{ p.price }})</option>
-        {% endfor %}
-    </select>
+                    <label>Choose GPU</label>
+                    <div class="part-container" data-type="gpu">
+                        <div class="part-row">
+                            <select class="part-select" onchange="handleSelect(this)">
+                                <option value="0">-- Select GPU --</option>
+                                {% for p in gpu %}
+                                <option value="{{ p.id }}" data-price="{{ p.price }}" data-stock="{{ p.quantity }}" {% if p.quantity <= 0 %}disabled{% endif %}>
+                                    {{ p.name }} (PHP {{ p.price }}){% if p.quantity <= 0 %} - Out of stock{% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <input type="number" class="part-qty" min="1" value="1" disabled onchange="calculateTotal()">
+                        </div>
+                    </div>
 
-    <!-- Case -->
-    <label>Choose Case</label>
-    <select id="case" onchange="calculateTotal()">
-        <option value="0">-- Select Case --</option>
-        {% for p in case %}
-        <option value="{{ p.price }}">{{ p.price }}">{{ p.name }} (₱{{ p.price }})</option>
-        {% endfor %}
-    </select>
+                    <label>Choose Storage</label>
+                    <div class="part-container" data-type="storage">
+                        <div class="part-row">
+                            <select class="part-select" onchange="handleSelect(this)">
+                                <option value="0">-- Select Storage --</option>
+                                {% for p in storage %}
+                                <option value="{{ p.id }}" data-price="{{ p.price }}" data-stock="{{ p.quantity }}" {% if p.quantity <= 0 %}disabled{% endif %}>
+                                    {{ p.name }} (PHP {{ p.price }}){% if p.quantity <= 0 %} - Out of stock{% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <input type="number" class="part-qty" min="1" value="1" disabled onchange="calculateTotal()">
+                        </div>
+                    </div>
 
-    <h2>Total Price: ₱ <span id="total">0.00</span></h2>
+                    <label>Choose PSU</label>
+                    <div class="part-container" data-type="psu">
+                        <div class="part-row">
+                            <select class="part-select" onchange="handleSelect(this)">
+                                <option value="0">-- Select PSU --</option>
+                                {% for p in psu %}
+                                <option value="{{ p.id }}" data-price="{{ p.price }}" data-stock="{{ p.quantity }}" {% if p.quantity <= 0 %}disabled{% endif %}>
+                                    {{ p.name }} (PHP {{ p.price }}){% if p.quantity <= 0 %} - Out of stock{% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <input type="number" class="part-qty" min="1" value="1" disabled onchange="calculateTotal()">
+                        </div>
+                    </div>
 
+                    <label>Choose Case</label>
+                    <div class="part-container" data-type="case">
+                        <div class="part-row">
+                            <select class="part-select" onchange="handleSelect(this)">
+                                <option value="0">-- Select Case --</option>
+                                {% for p in case %}
+                                <option value="{{ p.id }}" data-price="{{ p.price }}" data-stock="{{ p.quantity }}" {% if p.quantity <= 0 %}disabled{% endif %}>
+                                    {{ p.name }} (PHP {{ p.price }}){% if p.quantity <= 0 %} - Out of stock{% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <input type="number" class="part-qty" min="1" value="1" disabled onchange="calculateTotal()">
+                        </div>
+                    </div>
+                </div>
+
+                <h2 style="margin-top: 18px;">Total Price: PHP <span id="total">0.00</span></h2>
+                <button type="submit" class="btn btn-success checkout-btn">Checkout Build</button>
+            </form>
+        </section>
+        </main>
+    </div>
 </div>
 
 <script>
-    function calculateTotal() {
-        let total =
-            parseFloat(document.getElementById("ram").value) +
-            parseFloat(document.getElementById("motherboard").value) +
-            parseFloat(document.getElementById("cpu").value) +
-            parseFloat(document.getElementById("gpu").value) +
-            parseFloat(document.getElementById("storage").value) +
-            parseFloat(document.getElementById("psu").value) +
-            parseFloat(document.getElementById("case").value);
+function handleSelect(selectElement) {
+    const row = selectElement.closest(".part-row");
+    const qtyInput = row.querySelector(".part-qty");
+    const container = selectElement.closest(".part-container");
+    const rows = container.querySelectorAll(".part-row");
 
-        document.getElementById("total").innerText = total.toFixed(2);
+    const selectedOption = selectElement.options[selectElement.selectedIndex];
+    const stock = parseInt(selectedOption.dataset.stock || 0, 10);
+
+    if (selectElement.value !== "0") {
+        qtyInput.disabled = false;
+        qtyInput.max = stock;
+
+        if (stock <= 0) {
+            qtyInput.value = 0;
+            qtyInput.disabled = true;
+        } else {
+            qtyInput.value = 1;
+        }
+
+        if (row === rows[rows.length - 1]) {
+            const newRow = row.cloneNode(true);
+            const newSelect = newRow.querySelector(".part-select");
+            const newQty = newRow.querySelector(".part-qty");
+
+            newSelect.value = "0";
+            newQty.value = 1;
+            newQty.disabled = true;
+            newQty.removeAttribute("max");
+
+            container.appendChild(newRow);
+        }
+    } else {
+        qtyInput.disabled = true;
+        qtyInput.value = 1;
+        qtyInput.removeAttribute("max");
     }
-</script>
 
+    updateDisabledOptions(container);
+    calculateTotal();
+}
+
+function updateDisabledOptions(container) {
+    const selects = container.querySelectorAll(".part-select");
+    const selectedValues = Array.from(selects).map(s => s.value).filter(v => v !== "0");
+
+    selects.forEach(select => {
+        Array.from(select.options).forEach(option => {
+            if (option.value === "0") return;
+
+            const stock = parseInt(option.dataset.stock || 0, 10);
+            if (stock <= 0) {
+                option.disabled = true;
+                return;
+            }
+
+            option.disabled = selectedValues.includes(option.value) && option.value !== select.value;
+        });
+    });
+}
+
+function calculateTotal() {
+    let total = 0;
+
+    document.querySelectorAll(".part-row").forEach(row => {
+        const select = row.querySelector(".part-select");
+        const qty = row.querySelector(".part-qty");
+        const selectedOption = select.options[select.selectedIndex];
+
+        if (select.value !== "0" && !qty.disabled) {
+            const max = parseInt(qty.max || 1, 10);
+            const price = parseFloat(selectedOption.dataset.price || 0);
+
+            if (parseInt(qty.value || 0, 10) > max) {
+                qty.value = max;
+            }
+
+            total += price * parseInt(qty.value || 1, 10);
+        }
+    });
+
+    document.getElementById("total").innerText = total.toFixed(2);
+}
+
+function collectBuildItems() {
+    const selectedItems = [];
+
+    document.querySelectorAll(".part-row").forEach(row => {
+        const select = row.querySelector(".part-select");
+        const qtyInput = row.querySelector(".part-qty");
+
+        if (select.value !== "0" && !qtyInput.disabled) {
+            const quantity = parseInt(qtyInput.value || 0, 10);
+            const productId = parseInt(select.value, 10);
+            if (productId > 0 && quantity > 0) {
+                selectedItems.push({ product_id: productId, quantity: quantity });
+            }
+        }
+    });
+
+    return selectedItems;
+}
+
+document.querySelector('form[action*="checkout"]').addEventListener("submit", function () {
+    const selectedItems = collectBuildItems();
+    document.getElementById("build-items-input").value = JSON.stringify(selectedItems);
+});
+</script>
 </body>
 </html>
+
+<script>
+// Confirm before logging out
+(function(){
+    try{
+        var logoutUrl = "{% url 'logout' %}";
+        document.addEventListener('click', function(e){
+            var a = e.target.closest && e.target.closest('a');
+            if(!a) return;
+            var href = a.getAttribute('href');
+            if(!href) return;
+            if(href === logoutUrl){
+                e.preventDefault();
+                if(confirm('Are you sure you want to log out?')){
+                    window.location.href = logoutUrl;
+                }
+            }
+        });
+    }catch(err){console && console.error && console.error(err)}
+})();
+</script>
