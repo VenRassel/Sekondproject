@@ -21,5 +21,8 @@ urlpatterns = [
     path('pc-builder/checkout/', views.checkout_pc_build, name='checkout_pc_build'),
     path('pc-builder/history/', views.checkout_history, name='checkout-history'),
     path('pc-builder/history/<int:build_id>/', views.checkout_history_detail, name='checkout-history-detail'),
+    path('pc-builder/history/<int:build_id>/archive/', views.archive_build, name='archive-build'),
+    path('pc-builder/history/<int:build_id>/restore/', views.restore_build, name='restore-build'),
+    path('pc-builder/reorder/<int:build_id>/', views.reorder_build, name='reorder-build'),
 
 ]

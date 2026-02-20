@@ -1,4 +1,4 @@
-{% load static %}
+﻿{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -38,75 +38,78 @@
         </aside>
 
         <main class="main-panel">
-        <section class="topbar">
+        <section class="topbar profile-header">
             <div class="actions">
                 <a href="{% url 'landing' %}" class="btn btn-ghost">Back to Dashboard</a>
             </div>
-            <h1 style="margin-top: 14px;">Profile Settings</h1>
+            <h1>Profile Settings</h1>
             <p>Manage your account and profile information.</p>
         </section>
 
-        {% if messages %}
-        <section class="alerts">
-            {% for message in messages %}
-            <div class="alert {{ message.tags }}">{{ message }}</div>
-            {% endfor %}
-        </section>
-        {% endif %}
-
-        <section class="content-grid">
-            <article class="card">
-                <h2 class="card-title">Account Information</h2>
-                <form method="POST" enctype="multipart/form-data" class="forms-grid">
-                    {% csrf_token %}
-
-                    <div class="form-group">
-                        <label for="username">Username</label>
-                        {{ u_form.username }}
-                    </div>
-
-                    <div class="form-group">
-                        <label for="email">Email Address</label>
-                        {{ u_form.email }}
-                    </div>
-
-                    <div class="form-group">
-                        <label for="first_name">First Name</label>
-                        {{ u_form.first_name }}
-                    </div>
-
-                    <div class="form-group">
-                        <label for="last_name">Last Name</label>
-                        {{ u_form.last_name }}
-                    </div>
-
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                </form>
+        <section class="profile-settings-grid">
+            <article class="card profile-preview-card">
+                <h2 class="card-title">Profile Preview</h2>
+                <div class="profile-preview">
+                    {% if user.profile.profile_picture %}
+                        <img src="{{ user.profile.profile_picture.url }}" alt="Profile picture" class="profile-preview-avatar">
+                    {% else %}
+                        <div class="profile-preview-avatar profile-preview-fallback">{{ user.first_name|first|default:user.username|first|upper }}</div>
+                    {% endif %}
+                    <h3>{% if user.first_name or user.last_name %}{{ user.first_name }} {{ user.last_name }}{% else %}{{ user.username }}{% endif %}</h3>
+                    <p>{{ user.email|default:"No email added yet" }}</p>
+                </div>
             </article>
 
             <article class="card">
-                <h2 class="card-title">Profile Information</h2>
-                <form method="POST" enctype="multipart/form-data" class="forms-grid">
+                <h2 class="card-title">Edit Profile</h2>
+                <p class="muted profile-form-note">Update account and profile details in one form.</p>
+
+                <form method="POST" enctype="multipart/form-data" class="profile-form-grid">
                     {% csrf_token %}
 
-                    {% if user.profile.profile_picture %}
-                    <div style="text-align: center; margin-bottom: 12px;">
-                        <img src="{{ user.profile.profile_picture.url }}" alt="Profile picture" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #dde3f8;">
-                        <p style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">Current Profile Picture</p>
+                    <div class="profile-form-section">
+                        <h3>Account Information</h3>
+                        <div class="form-group">
+                            <label for="profile_username">Username</label>
+                            <input type="text" id="profile_username" value="{{ user.username }}" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="id_email">Email Address</label>
+                            {{ u_form.email }}
+                        </div>
+                        <div class="form-group">
+                            <label for="id_first_name">First Name</label>
+                            {{ u_form.first_name }}
+                        </div>
+                        <div class="form-group">
+                            <label for="id_last_name">Last Name</label>
+                            {{ u_form.last_name }}
+                        </div>
                     </div>
-                    {% endif %}
 
-                    <div class="form-group">
-                        <label for="profile_picture">Profile Picture</label>
-                        {{ p_form.profile_picture }}
+                    <div class="profile-form-section">
+                        <h3>Profile Information</h3>
+                        <div class="form-group">
+                            <label for="id_profile_picture">Profile Picture</label>
+                            <input type="file" name="profile_picture" id="id_profile_picture" accept="image/*">
+                            {% if user.profile.profile_picture %}
+                                <small class="profile-file-meta">
+                                    Current:
+                                    <a href="{{ user.profile.profile_picture.url }}" target="_blank" rel="noopener noreferrer">
+                                        {{ user.profile.profile_picture.name|cut:"profiles/"|truncatechars:36 }}
+                                    </a>
+                                </small>
+                                <label class="profile-clear-wrap" for="id_profile_picture-clear">
+                                    <input type="checkbox" name="profile_picture-clear" id="id_profile_picture-clear">
+                                    Remove current photo
+                                </label>
+                            {% endif %}
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="role">Role</label>
-                        {{ p_form.role }}
+                    <div class="profile-form-actions">
+                        <button type="submit" class="btn btn-primary">Save Profile Changes</button>
                     </div>
-
-                    <button type="submit" class="btn btn-primary">Update Profile</button>
                 </form>
             </article>
         </section>
@@ -136,3 +139,4 @@
     }catch(err){console && console.error && console.error(err)}
 })();
 </script>
+

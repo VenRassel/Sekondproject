@@ -1,4 +1,4 @@
-﻿{% load static %}
+﻿{% load static humanize %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -38,7 +38,7 @@
         </aside>
 
         <main class="main-panel">
-            <section class="topbar">
+        <section class="topbar builder-topbar">
             <div class="actions">
                 <a href="{% url 'landing' %}" class="btn btn-ghost">Back to Home</a>
                 <a href="{% url 'checkout-history' %}" class="btn btn-ghost">Checkout History</a>
@@ -47,20 +47,28 @@
             <p>Create a quote by selecting parts and quantities by category.</p>
         </section>
 
-        <section class="card">
-            <form method="post" action="{% url 'checkout_pc_build' %}">
+        {% if prefill_notes %}
+        <section class="alerts">
+            {% for note in prefill_notes %}
+            <div class="alert error">{{ note }}</div>
+            {% endfor %}
+        </section>
+        {% endif %}
+
+        <section class="card builder-card">
+            <form method="post" action="{% url 'checkout_pc_build' %}" class="builder-form">
                 {% csrf_token %}
                 <input type="hidden" name="build_items" id="build-items-input" value="[]">
 
                 <div class="forms-grid">
-                    <label>Choose RAM</label>
+                    <label class="builder-label">Choose RAM</label>
                     <div class="part-container" data-type="ram">
                         <div class="part-row">
                             <select class="part-select" onchange="handleSelect(this)">
                                 <option value="0">-- Select RAM --</option>
                                 {% for p in ram %}
                                 <option value="{{ p.id }}" data-price="{{ p.price }}" data-stock="{{ p.quantity }}" {% if p.quantity <= 0 %}disabled{% endif %}>
-                                    {{ p.name }} (PHP {{ p.price }}){% if p.quantity <= 0 %} - Out of stock{% endif %}
+                                    {{ p.name }} (PHP {{ p.price|floatformat:2|intcomma }}){% if p.quantity <= 0 %} - Out of stock{% endif %}
                                 </option>
                                 {% endfor %}
                             </select>
@@ -68,14 +76,14 @@
                         </div>
                     </div>
 
-                    <label>Choose Motherboard</label>
+                    <label class="builder-label">Choose Motherboard</label>
                     <div class="part-container" data-type="motherboard">
                         <div class="part-row">
                             <select class="part-select" onchange="handleSelect(this)">
                                 <option value="0">-- Select Motherboard --</option>
                                 {% for p in motherboard %}
                                 <option value="{{ p.id }}" data-price="{{ p.price }}" data-stock="{{ p.quantity }}" {% if p.quantity <= 0 %}disabled{% endif %}>
-                                    {{ p.name }} (PHP {{ p.price }}){% if p.quantity <= 0 %} - Out of stock{% endif %}
+                                    {{ p.name }} (PHP {{ p.price|floatformat:2|intcomma }}){% if p.quantity <= 0 %} - Out of stock{% endif %}
                                 </option>
                                 {% endfor %}
                             </select>
@@ -83,14 +91,14 @@
                         </div>
                     </div>
 
-                    <label>Choose CPU</label>
+                    <label class="builder-label">Choose CPU</label>
                     <div class="part-container" data-type="cpu">
                         <div class="part-row">
                             <select class="part-select" onchange="handleSelect(this)">
                                 <option value="0">-- Select CPU --</option>
                                 {% for p in cpu %}
                                 <option value="{{ p.id }}" data-price="{{ p.price }}" data-stock="{{ p.quantity }}" {% if p.quantity <= 0 %}disabled{% endif %}>
-                                    {{ p.name }} (PHP {{ p.price }}){% if p.quantity <= 0 %} - Out of stock{% endif %}
+                                    {{ p.name }} (PHP {{ p.price|floatformat:2|intcomma }}){% if p.quantity <= 0 %} - Out of stock{% endif %}
                                 </option>
                                 {% endfor %}
                             </select>
@@ -98,14 +106,14 @@
                         </div>
                     </div>
 
-                    <label>Choose GPU</label>
+                    <label class="builder-label">Choose GPU</label>
                     <div class="part-container" data-type="gpu">
                         <div class="part-row">
                             <select class="part-select" onchange="handleSelect(this)">
                                 <option value="0">-- Select GPU --</option>
                                 {% for p in gpu %}
                                 <option value="{{ p.id }}" data-price="{{ p.price }}" data-stock="{{ p.quantity }}" {% if p.quantity <= 0 %}disabled{% endif %}>
-                                    {{ p.name }} (PHP {{ p.price }}){% if p.quantity <= 0 %} - Out of stock{% endif %}
+                                    {{ p.name }} (PHP {{ p.price|floatformat:2|intcomma }}){% if p.quantity <= 0 %} - Out of stock{% endif %}
                                 </option>
                                 {% endfor %}
                             </select>
@@ -113,14 +121,14 @@
                         </div>
                     </div>
 
-                    <label>Choose Storage</label>
+                    <label class="builder-label">Choose Storage</label>
                     <div class="part-container" data-type="storage">
                         <div class="part-row">
                             <select class="part-select" onchange="handleSelect(this)">
                                 <option value="0">-- Select Storage --</option>
                                 {% for p in storage %}
                                 <option value="{{ p.id }}" data-price="{{ p.price }}" data-stock="{{ p.quantity }}" {% if p.quantity <= 0 %}disabled{% endif %}>
-                                    {{ p.name }} (PHP {{ p.price }}){% if p.quantity <= 0 %} - Out of stock{% endif %}
+                                    {{ p.name }} (PHP {{ p.price|floatformat:2|intcomma }}){% if p.quantity <= 0 %} - Out of stock{% endif %}
                                 </option>
                                 {% endfor %}
                             </select>
@@ -128,14 +136,14 @@
                         </div>
                     </div>
 
-                    <label>Choose PSU</label>
+                    <label class="builder-label">Choose PSU</label>
                     <div class="part-container" data-type="psu">
                         <div class="part-row">
                             <select class="part-select" onchange="handleSelect(this)">
                                 <option value="0">-- Select PSU --</option>
                                 {% for p in psu %}
                                 <option value="{{ p.id }}" data-price="{{ p.price }}" data-stock="{{ p.quantity }}" {% if p.quantity <= 0 %}disabled{% endif %}>
-                                    {{ p.name }} (PHP {{ p.price }}){% if p.quantity <= 0 %} - Out of stock{% endif %}
+                                    {{ p.name }} (PHP {{ p.price|floatformat:2|intcomma }}){% if p.quantity <= 0 %} - Out of stock{% endif %}
                                 </option>
                                 {% endfor %}
                             </select>
@@ -143,14 +151,14 @@
                         </div>
                     </div>
 
-                    <label>Choose Case</label>
+                    <label class="builder-label">Choose Case</label>
                     <div class="part-container" data-type="case">
                         <div class="part-row">
                             <select class="part-select" onchange="handleSelect(this)">
                                 <option value="0">-- Select Case --</option>
                                 {% for p in case %}
                                 <option value="{{ p.id }}" data-price="{{ p.price }}" data-stock="{{ p.quantity }}" {% if p.quantity <= 0 %}disabled{% endif %}>
-                                    {{ p.name }} (PHP {{ p.price }}){% if p.quantity <= 0 %} - Out of stock{% endif %}
+                                    {{ p.name }} (PHP {{ p.price|floatformat:2|intcomma }}){% if p.quantity <= 0 %} - Out of stock{% endif %}
                                 </option>
                                 {% endfor %}
                             </select>
@@ -159,8 +167,16 @@
                     </div>
                 </div>
 
-                <h2 style="margin-top: 18px;">Total Price: PHP <span id="total">0.00</span></h2>
-                <button type="submit" class="btn btn-success checkout-btn">Checkout Build</button>
+                <div class="builder-summary">
+                    <h2 class="builder-total-title">Total Price</h2>
+                    <p class="builder-total-amount">PHP <span id="total">0.00</span></p>
+                </div>
+                <div class="actions">
+                    <button type="submit" class="btn btn-success checkout-btn">Checkout Build</button>
+                    {% if show_reorder_cancel %}
+                    <a href="{% if prefill_cancel_url %}{{ prefill_cancel_url }}{% else %}{% url 'checkout-history' %}{% endif %}" class="btn btn-danger checkout-btn">Cancel Reorder</a>
+                    {% endif %}
+                </div>
             </form>
         </section>
         </main>
@@ -168,6 +184,8 @@
 </div>
 
 <script>
+const prefillBuildItems = JSON.parse('{{ prefill_build_items_json|escapejs }}');
+
 function handleSelect(selectElement) {
     const row = selectElement.closest(".part-row");
     const qtyInput = row.querySelector(".part-qty");
@@ -249,7 +267,7 @@ function calculateTotal() {
         }
     });
 
-    document.getElementById("total").innerText = total.toFixed(2);
+    document.getElementById("total").innerText = total.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function collectBuildItems() {
@@ -270,6 +288,60 @@ function collectBuildItems() {
 
     return selectedItems;
 }
+
+function applyPrefill(items) {
+    if (!Array.isArray(items) || !items.length) {
+        return;
+    }
+
+    items.forEach(item => {
+        const productId = String(item.product_id || 0);
+        const requestedQty = parseInt(item.quantity || 1, 10);
+        if (productId === "0") {
+            return;
+        }
+
+        const containers = document.querySelectorAll(".part-container");
+        let targetContainer = null;
+
+        for (const container of containers) {
+            const firstSelect = container.querySelector(".part-select");
+            if (!firstSelect) {
+                continue;
+            }
+
+            const hasOption = Array.from(firstSelect.options).some(option => option.value === productId);
+            if (hasOption) {
+                targetContainer = container;
+                break;
+            }
+        }
+
+        if (!targetContainer) {
+            return;
+        }
+
+        const rows = targetContainer.querySelectorAll(".part-row");
+        const targetRow = rows[rows.length - 1];
+        const select = targetRow.querySelector(".part-select");
+        const qtyInput = targetRow.querySelector(".part-qty");
+        select.value = productId;
+        handleSelect(select);
+
+        const selectedOption = select.options[select.selectedIndex];
+        const stock = parseInt(selectedOption.dataset.stock || 0, 10);
+        const maxAllowed = stock > 0 ? stock : 1;
+        const safeQty = Math.max(1, Math.min(requestedQty, maxAllowed));
+
+        if (!qtyInput.disabled) {
+            qtyInput.value = safeQty;
+        }
+    });
+
+    calculateTotal();
+}
+
+applyPrefill(prefillBuildItems);
 
 document.querySelector('form[action*="checkout"]').addEventListener("submit", function () {
     const selectedItems = collectBuildItems();
@@ -299,3 +371,6 @@ document.querySelector('form[action*="checkout"]').addEventListener("submit", fu
     }catch(err){console && console.error && console.error(err)}
 })();
 </script>
+
+
+

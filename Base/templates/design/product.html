@@ -1,4 +1,4 @@
-﻿{% load static %}
+﻿{% load static humanize %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -141,7 +141,7 @@
                         <select id="stock_status" name="stock_status">
                             <option value="">All Items</option>
                             <option value="in_stock" {% if stock_status == 'in_stock' %}selected{% endif %}>In Stock</option>
-                            <option value="low_stock" {% if stock_status == 'low_stock' %}selected{% endif %}>Low Stock (≤5)</option>
+                            <option value="low_stock" {% if stock_status == 'low_stock' %}selected{% endif %}>Low Stock (=5)</option>
                             <option value="out_of_stock" {% if stock_status == 'out_of_stock' %}selected{% endif %}>Out of Stock</option>
                         </select>
                     </div>
@@ -190,7 +190,7 @@
                             <td><strong>{{ product.name }}</strong></td>
                             <td>{{ product.description|default:"-" }}</td>
                             <td>{{ product.category|title }}</td>
-                            <td><span class="text-success">PHP {{ product.price }}</span></td>
+                            <td><span class="text-success">PHP {{ product.price|floatformat:2|intcomma }}</span></td>
                             <td>{{ product.quantity }}</td>
                             <td>{{ product.created_at|date:"M d, Y" }}</td>
                             <td>
@@ -238,3 +238,6 @@
     }catch(err){console && console.error && console.error(err)}
 })();
 </script>
+
+
+

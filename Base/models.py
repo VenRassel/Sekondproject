@@ -47,6 +47,7 @@ class PCBuild(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     total_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    is_archived = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -99,6 +100,5 @@ class StockMovement(models.Model):
     def __str__(self):
         sign = '+' if self.quantity_change >= 0 else ''
         return f"{self.product.name} {sign}{self.quantity_change} ({self.reason})"
-
 
 

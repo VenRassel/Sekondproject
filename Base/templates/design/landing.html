@@ -1,4 +1,4 @@
-﻿{% load static %}
+﻿{% load static humanize %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -59,6 +59,16 @@
                 </article>
             </section>
 
+            <section class="card chart-card">
+                <div class="chart-head">
+                    <h2 class="card-title">Sales Analytics (Last 6 Months)</h2>
+                    <p class="muted">Revenue trend and number of completed builds.</p>
+                </div>
+                <div class="chart-wrap">
+                    <canvas id="dashboard-sales-chart"></canvas>
+                </div>
+            </section>
+
             <section class="card">
                 <div class="actions" style="margin-bottom:12px;">
                     <a class="btn btn-primary" href="{% url 'product' %}">Manage Products</a>
@@ -80,7 +90,7 @@
                             <tr>
                                 <td><strong>{{ product.name }}</strong></td>
                                 <td>{{ product.description|default:"-" }}</td>
-                                <td><span class="text-success">PHP {{ product.price }}</span></td>
+                                <td><span class="text-success">PHP {{ product.price|floatformat:2|intcomma }}</span></td>
                                 <td>{{ product.quantity }}</td>
                                 <td>{{ product.created_at|date:"M d, Y" }}</td>
                             </tr>
@@ -99,7 +109,71 @@
 </body>
 </html>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+const salesChartLabels = JSON.parse('{{ sales_chart_labels_json|escapejs }}');
+const salesChartRevenue = JSON.parse('{{ sales_chart_revenue_json|escapejs }}');
+const salesChartBuildCount = JSON.parse('{{ sales_chart_build_count_json|escapejs }}');
+
+if (window.Chart) {
+    const ctx = document.getElementById('dashboard-sales-chart');
+    if (ctx) {
+        new Chart(ctx, {
+            data: {
+                labels: salesChartLabels,
+                datasets: [
+                    {
+                        type: 'bar',
+                        label: 'Revenue (PHP)',
+                        data: salesChartRevenue,
+                        backgroundColor: 'rgba(63, 70, 182, 0.18)',
+                        borderColor: 'rgba(63, 70, 182, 0.85)',
+                        borderWidth: 1,
+                        yAxisID: 'y',
+                    },
+                    {
+                        type: 'line',
+                        label: 'Checked Out Builds',
+                        data: salesChartBuildCount,
+                        borderColor: '#1f9d5a',
+                        backgroundColor: 'rgba(31, 157, 90, 0.16)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true,
+                        yAxisID: 'y1',
+                    },
+                ],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return 'PHP ' + Number(value).toLocaleString('en-US');
+                            },
+                        },
+                    },
+                    y1: {
+                        beginAtZero: true,
+                        position: 'right',
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                    },
+                },
+            },
+        });
+    }
+}
+
 // Confirm before logging out on pages that don't extend layout.html
 (function(){
     try{
@@ -119,3 +193,6 @@
     }catch(err){console && console.error && console.error(err)}
 })();
 </script>
+
+
+

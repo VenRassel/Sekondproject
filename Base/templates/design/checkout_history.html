@@ -1,4 +1,4 @@
-﻿{% load static %}
+﻿{% load static humanize %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -47,6 +47,13 @@
             <p>All checked out builds and performance analytics.</p>
         </section>
 
+        <section class="card">
+            <div class="actions">
+                <a class="btn {% if not show_archived %}btn-primary{% else %}btn-ghost{% endif %}" href="{% url 'checkout-history' %}?view=active">Active History</a>
+                <a class="btn {% if show_archived %}btn-primary{% else %}btn-ghost{% endif %}" href="{% url 'checkout-history' %}?view=archived">Archived</a>
+            </div>
+        </section>
+
         <!-- Analytics Section -->
         <section class="metric-grid">
             <article class="metric">
@@ -55,11 +62,11 @@
             </article>
             <article class="metric">
                 <span class="muted">Total Revenue</span>
-                <strong style="color: var(--success);">PHP {{ total_revenue|floatformat:2 }}</strong>
+                <strong style="color: var(--success);">PHP {{ total_revenue|floatformat:2|intcomma }}</strong>
             </article>
             <article class="metric">
                 <span class="muted">Average Order Value</span>
-                <strong>PHP {{ avg_order_value|floatformat:2 }}</strong>
+                <strong>PHP {{ avg_order_value|floatformat:2|intcomma }}</strong>
             </article>
             {% if most_popular_item %}
             <article class="metric">
@@ -86,16 +93,40 @@
                     <tbody>
                         {% for build in builds %}
                         <tr>
-                            <td>#{{ build.id }}</td>
+                            <td>#{{ build.display_number }}</td>
                             <td>{{ build.user.username }}</td>
                             <td>{{ build.item_count }}</td>
-                            <td>PHP {{ build.total_price }}</td>
+                            <td><span class="text-success">PHP {{ build.total_price|floatformat:2|intcomma }}</span></td>
                             <td>{{ build.created_at|date:"M d, Y h:i A" }}</td>
-                            <td><a class="btn btn-ghost" href="{% url 'checkout-history-detail' build.id %}">View Details</a></td>
+                            <td>
+                                <div class="actions">
+                                    <a class="btn btn-ghost" href="{% url 'checkout-history-detail' build.id %}?view={% if show_archived %}archived{% else %}active{% endif %}">View Details</a>
+                                    <a class="btn btn-primary" href="{% url 'reorder-build' build.id %}?view={% if show_archived %}archived{% else %}active{% endif %}">Reorder</a>
+                                    {% if show_archived %}
+                                    <form method="post" action="{% url 'restore-build' build.id %}" style="display:inline; margin:0;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="next_view" value="archived">
+                                        <button type="submit" class="btn btn-ghost">Restore</button>
+                                    </form>
+                                    {% else %}
+                                    <form method="post" action="{% url 'archive-build' build.id %}" style="display:inline; margin:0;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="next_view" value="active">
+                                        <button type="submit" class="btn btn-danger" onclick="return confirm('Archive build #{{ build.id }}?')">Archive</button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="6" class="muted">No checkout records yet.</td>
+                            <td colspan="6" class="muted">
+                                {% if show_archived %}
+                                    No archived checkout records yet.
+                                {% else %}
+                                    No checkout records yet.
+                                {% endif %}
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -128,3 +159,6 @@
     }catch(err){console && console.error && console.error(err)}
 })();
 </script>
+
+
+

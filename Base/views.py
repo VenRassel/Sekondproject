@@ -1,5 +1,6 @@
 # Base/views.py
 import json
+from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -13,7 +14,10 @@ from .forms import SignUpForm
 from django.contrib.auth import login
 from .models import PCBuild, PCBuildItem, StockMovement
 from django.db import transaction
+from django.db.models import Count, Sum
+from django.db.models.functions import TruncMonth
 from django.shortcuts import redirect, get_object_or_404
+from django.utils import timezone
 
 # new imports
 from .forms import UserUpdateForm, ProfileUpdateForm
@@ -21,7 +25,47 @@ from .forms import UserUpdateForm, ProfileUpdateForm
 @login_required
 def landing(request):
     products = Product.objects.all().order_by('-created_at')
-    return render(request, 'design/landing.html', {'products': products})
+    now = timezone.now()
+    months_back = 6
+    start_date = now - timedelta(days=30 * (months_back - 1))
+    start_month = start_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    monthly_analytics = (
+        PCBuild.objects.filter(status='checked_out', created_at__gte=start_month)
+        .annotate(month=TruncMonth('created_at'))
+        .values('month')
+        .annotate(
+            revenue=Sum('total_price'),
+            builds=Count('id'),
+        )
+        .order_by('month')
+    )
+
+    monthly_map = {
+        entry['month'].strftime('%b %Y'): {
+            'revenue': float(entry['revenue'] or 0),
+            'builds': int(entry['builds'] or 0),
+        }
+        for entry in monthly_analytics
+    }
+
+    chart_labels = []
+    chart_revenue = []
+    chart_builds = []
+    for offset in range(months_back - 1, -1, -1):
+        month_date = (now - timedelta(days=30 * offset)).replace(day=1)
+        month_key = month_date.strftime('%b %Y')
+        chart_labels.append(month_key)
+        month_data = monthly_map.get(month_key, {'revenue': 0.0, 'builds': 0})
+        chart_revenue.append(round(month_data['revenue'], 2))
+        chart_builds.append(month_data['builds'])
+
+    return render(request, 'design/landing.html', {
+        'products': products,
+        'sales_chart_labels_json': json.dumps(chart_labels),
+        'sales_chart_revenue_json': json.dumps(chart_revenue),
+        'sales_chart_build_count_json': json.dumps(chart_builds),
+    })
 
 @login_required
 def product(request):
@@ -124,7 +168,7 @@ def category(request):
     if category_filter:
         products = products.filter(category=category_filter)
 
-    return render(request, 'design/category.html', {
+    return render(request, 'design/masterlist.html', {
         'products': products,
         'category_filter': category_filter
     })
@@ -181,6 +225,10 @@ def delete_product(request, product_id):
 
 @login_required
 def pc_builder(request):
+    prefill_build_items = request.session.pop('prefill_build_items', [])
+    prefill_notes = request.session.pop('prefill_notes', [])
+    prefill_cancel_url = request.session.pop('prefill_cancel_url', '')
+
     # Fetch products per category
     ram = Product.objects.filter(category='ram')
     motherboard = Product.objects.filter(category='motherboard')
@@ -198,7 +246,50 @@ def pc_builder(request):
         'storage': storage,
         'psu': psu,
         'case': case,
+        'prefill_build_items_json': json.dumps(prefill_build_items),
+        'prefill_notes': prefill_notes,
+        'show_reorder_cancel': bool(prefill_build_items),
+        'prefill_cancel_url': prefill_cancel_url,
     })
+
+
+@login_required
+def reorder_build(request, build_id):
+    build = get_object_or_404(PCBuild, id=build_id, status='checked_out')
+    build_items = build.items.select_related('product')
+    history_view = request.GET.get('view', 'active')
+    if history_view not in ('active', 'archived'):
+        history_view = 'active'
+
+    prefill_items = []
+    notes = []
+
+    for item in build_items:
+        product = item.product
+        available_qty = max(product.quantity, 0)
+        if available_qty <= 0:
+            notes.append(f"{product.name} is currently out of stock and was skipped.")
+            continue
+
+        safe_qty = min(item.quantity, available_qty)
+        if safe_qty < item.quantity:
+            notes.append(
+                f"{product.name} quantity was adjusted from {item.quantity} to {safe_qty} (available stock)."
+            )
+
+        prefill_items.append({
+            'product_id': product.id,
+            'quantity': safe_qty,
+        })
+
+    if not prefill_items:
+        messages.error(request, "No items from this build are currently available to reorder.")
+        return redirect('checkout-history-detail', build_id=build.id)
+
+    request.session['prefill_build_items'] = prefill_items
+    request.session['prefill_notes'] = notes
+    request.session['prefill_cancel_url'] = f"/pc-builder/history/?view={history_view}"
+    return redirect('pc-builder')
 
 def login_view(request):
     if request.user.is_authenticated:
@@ -363,22 +454,30 @@ def checkout_pc_build(request):
 @login_required
 def checkout_history(request):
     """Display checkout history with analytics"""
-    # Get all checked-out builds
-    analytics_builds = PCBuild.objects.filter(status='checked_out')
-    builds = list(analytics_builds.order_by('-created_at'))
+    view_mode = request.GET.get('view', 'active')
+    show_archived = view_mode == 'archived'
+
+    # Get checked-out builds based on selected tab
+    builds_qs = PCBuild.objects.filter(
+        status='checked_out',
+        is_archived=show_archived,
+    ).order_by('-created_at')
+    builds = list(builds_qs)
     
     # Add item_count to each build for display
-    for build in builds:
+    total_listed_builds = len(builds)
+    for index, build in enumerate(builds, start=1):
+        build.display_number = total_listed_builds - index + 1
         build.item_count = build.items.count()
     
     # Analytics calculations
     from django.db.models import Sum, Count
     
-    total_builds = analytics_builds.count()
+    total_builds = builds_qs.count()
     
     # Calculate total revenue using Python instead of Django ORM
     total_revenue = Decimal('0.00')
-    for build in analytics_builds:
+    for build in builds:
         total_revenue += build.total_price
     
     avg_order_value = total_revenue / total_builds if total_builds > 0 else Decimal('0.00')
@@ -387,7 +486,7 @@ def checkout_history(request):
     most_popular_item = None
     most_popular_count = 0
     if total_builds > 0:
-        popular = PCBuildItem.objects.values('product__name').annotate(
+        popular = PCBuildItem.objects.filter(build__in=builds_qs).values('product__name').annotate(
             count=Count('id')
         ).order_by('-count').first()
         if popular:
@@ -401,6 +500,7 @@ def checkout_history(request):
         'avg_order_value': float(avg_order_value),
         'most_popular_item': most_popular_item,
         'most_popular_count': most_popular_count,
+        'show_archived': show_archived,
     }
     import sys
     # Debug prints so you can see values when the page is requested
@@ -413,6 +513,9 @@ def checkout_history_detail(request, build_id):
     """Display detailed view of a specific build"""
     build = get_object_or_404(PCBuild, id=build_id)
     stock_movements = StockMovement.objects.filter(build=build).order_by('-created_at')
+    history_view = request.GET.get('view')
+    if history_view not in ('active', 'archived'):
+        history_view = 'archived' if build.is_archived else 'active'
     
     # Calculate average item price
     item_count = build.items.count()
@@ -422,4 +525,41 @@ def checkout_history_detail(request, build_id):
         'build': build,
         'stock_movements': stock_movements,
         'avg_item_price': avg_item_price,
+        'history_view': history_view,
     })
+
+
+@login_required
+def archive_build(request, build_id):
+    if request.method != 'POST':
+        return redirect('checkout-history')
+
+    next_view = request.POST.get('next_view', 'active')
+    if next_view not in ('active', 'archived'):
+        next_view = 'active'
+
+    build = get_object_or_404(PCBuild, id=build_id, status='checked_out')
+    if not build.is_archived:
+        build.is_archived = True
+        build.save(update_fields=['is_archived'])
+        messages.success(request, f"Build #{build.id} archived.")
+
+    return redirect(f"/pc-builder/history/?view={next_view}")
+
+
+@login_required
+def restore_build(request, build_id):
+    if request.method != 'POST':
+        return redirect('checkout-history')
+
+    next_view = request.POST.get('next_view', 'active')
+    if next_view not in ('active', 'archived'):
+        next_view = 'active'
+
+    build = get_object_or_404(PCBuild, id=build_id, status='checked_out')
+    if build.is_archived:
+        build.is_archived = False
+        build.save(update_fields=['is_archived'])
+        messages.success(request, f"Build #{build.id} restored.")
+
+    return redirect(f"/pc-builder/history/?view={next_view}")

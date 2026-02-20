@@ -1,4 +1,4 @@
-{% load static %}
+﻿{% load static humanize %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -27,21 +27,35 @@
                 </div>
             </div>
             <ul class="nav-list">
-                <li><a href="{% url 'landing' %}">Dashboard <span>›</span></a></li>
-                <li><a href="{% url 'product' %}">Product Management <span>›</span></a></li>
-                <li><a href="{% url 'category' %}">Masterlist <span>›</span></a></li>
-                <li><a href="{% url 'pc-builder' %}">Price Quote <span>›</span></a></li>
-                <li><a class="active" href="{% url 'checkout-history' %}">Checkout History <span>›</span></a></li>
-                <li><a href="{% url 'profile-settings' %}">Profile Settings <span>›</span></a></li>
-                <li><a href="{% url 'logout' %}">Log out <span>›</span></a></li>
+                <li><a href="{% url 'landing' %}">Dashboard <span>â€º</span></a></li>
+                <li><a href="{% url 'product' %}">Product Management <span>â€º</span></a></li>
+                <li><a href="{% url 'category' %}">Masterlist <span>â€º</span></a></li>
+                <li><a href="{% url 'pc-builder' %}">Price Quote <span>â€º</span></a></li>
+                <li><a class="active" href="{% url 'checkout-history' %}">Checkout History <span>â€º</span></a></li>
+                <li><a href="{% url 'profile-settings' %}">Profile Settings <span>â€º</span></a></li>
+                <li><a href="{% url 'logout' %}">Log out <span>â€º</span></a></li>
             </ul>
         </aside>
 
         <main class="main-panel">
             <section class="topbar">
                 <div class="actions">
-                    <a class="btn btn-ghost" href="{% url 'checkout-history' %}">Back to History</a>
+                    <a class="btn btn-ghost" href="{% url 'checkout-history' %}?view={{ history_view }}">Back to History</a>
                     <a class="btn btn-ghost" href="{% url 'pc-builder' %}">Back to PC Builder</a>
+                    <a class="btn btn-primary" href="{% url 'reorder-build' build.id %}?view={{ history_view }}">Reorder This Build</a>
+                    {% if build.is_archived %}
+                    <form method="post" action="{% url 'restore-build' build.id %}" style="display:inline; margin:0;">
+                        {% csrf_token %}
+                        <input type="hidden" name="next_view" value="{{ history_view }}">
+                        <button type="submit" class="btn btn-ghost">Restore</button>
+                    </form>
+                    {% else %}
+                    <form method="post" action="{% url 'archive-build' build.id %}" style="display:inline; margin:0;">
+                        {% csrf_token %}
+                        <input type="hidden" name="next_view" value="{{ history_view }}">
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('Archive build #{{ build.id }}?')">Archive</button>
+                    </form>
+                    {% endif %}
                 </div>
                 <h1 style="margin-top: 14px;">Checkout Build #{{ build.id }}</h1>
                 <p>View details of this PC build checkout.</p>
@@ -56,7 +70,9 @@
                     </div>
                     <div>
                         <p style="margin: 0 0 4px; font-size: 12px; color: var(--text-muted); font-weight: 600;">Status</p>
-                        <p style="margin: 0; font-size: 16px; font-weight: 600;">{{ build.status|title }}</p>
+                        <p style="margin: 0; font-size: 16px; font-weight: 600;">
+                            {{ build.status|title }}{% if build.is_archived %} (Archived){% endif %}
+                        </p>
                     </div>
                     <div>
                         <p style="margin: 0 0 4px; font-size: 12px; color: var(--text-muted); font-weight: 600;">Date</p>
@@ -73,7 +89,7 @@
             <section class="metric-grid">
                 <article class="metric">
                     <span class="muted">Total Price</span>
-                    <strong style="color: var(--success);">PHP {{ build.total_price }}</strong>
+                    <strong style="color: var(--success);">PHP {{ build.total_price|floatformat:2|intcomma }}</strong>
                 </article>
                 <article class="metric">
                     <span class="muted">Items Checked Out</span>
@@ -81,7 +97,7 @@
                 </article>
                 <article class="metric">
                     <span class="muted">Average Item Price</span>
-                    <strong>PHP {{ avg_item_price|floatformat:2 }}</strong>
+                    <strong>PHP {{ avg_item_price|floatformat:2|intcomma }}</strong>
                 </article>
             </section>
 
@@ -103,8 +119,8 @@
                             <tr>
                                 <td><strong>{{ item.product.name }}</strong></td>
                                 <td>{{ item.quantity }}</td>
-                                <td>PHP {{ item.price_at_time }}</td>
-                                <td>PHP {{ item.subtotal }}</td>
+                                <td>PHP {{ item.price_at_time|floatformat:2|intcomma }}</td>
+                                <td>PHP {{ item.subtotal|floatformat:2|intcomma }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -172,3 +188,6 @@
     }catch(err){console && console.error && console.error(err)}
 })();
 </script>
+
+
+
