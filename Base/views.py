@@ -1,23 +1,20 @@
-# Base/views.py
+﻿# Base/views.py
 import json
-from datetime import timedelta
 from decimal import Decimal, InvalidOperation
+from urllib.parse import urlencode
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from .models import Product
-from .models import Product, CATEGORY_CHOICES
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.contrib.auth import login, logout
+from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.decorators import login_required
-from .models import Profile
-from .forms import SignUpForm
-from django.contrib.auth import login
-from .models import PCBuild, PCBuildItem, StockMovement
 from django.db import transaction
 from django.db.models import Count, Sum
 from django.db.models.functions import TruncMonth
-from django.shortcuts import redirect, get_object_or_404
 from django.utils import timezone
+
+from .models import Product
+from .forms import SignUpForm
+from .models import PCBuild, PCBuildItem, StockMovement
 
 # new imports
 from .forms import UserUpdateForm, ProfileUpdateForm
@@ -25,10 +22,17 @@ from .forms import UserUpdateForm, ProfileUpdateForm
 @login_required
 def landing(request):
     products = Product.objects.all().order_by('-created_at')
+
+    def add_months(base_dt, delta_months):
+        month_index = (base_dt.month - 1) + delta_months
+        year = base_dt.year + (month_index // 12)
+        month = (month_index % 12) + 1
+        return base_dt.replace(year=year, month=month, day=1)
+
     now = timezone.now()
     months_back = 6
-    start_date = now - timedelta(days=30 * (months_back - 1))
-    start_month = start_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    start_month = add_months(current_month, -(months_back - 1))
 
     monthly_analytics = (
         PCBuild.objects.filter(status='checked_out', created_at__gte=start_month)
@@ -52,8 +56,8 @@ def landing(request):
     chart_labels = []
     chart_revenue = []
     chart_builds = []
-    for offset in range(months_back - 1, -1, -1):
-        month_date = (now - timedelta(days=30 * offset)).replace(day=1)
+    for offset in range(-(months_back - 1), 1):
+        month_date = add_months(current_month, offset)
         month_key = month_date.strftime('%b %Y')
         chart_labels.append(month_key)
         month_data = monthly_map.get(month_key, {'revenue': 0.0, 'builds': 0})
@@ -160,23 +164,68 @@ def add_product(request):
 
 @login_required
 def category(request):
-    category_filter = request.GET.get('category', '')
+    products = Product.objects.all()
 
-    products = Product.objects.all().order_by('-created_at')
+    # GET filters
+    search_query = request.GET.get('search', '')
+    category_filter = request.GET.get('category', '')
+    min_price = request.GET.get('min_price', '')
+    max_price = request.GET.get('max_price', '')
+    stock_status = request.GET.get('stock_status', '')
+    sort_by = request.GET.get('sort', '-created_at')
+
+    # APPLY SEARCH FILTER
+    if search_query:
+        products = products.filter(name__icontains=search_query)
 
     # APPLY CATEGORY FILTER
     if category_filter:
         products = products.filter(category=category_filter)
 
+    # APPLY PRICE FILTERS
+    if min_price:
+        try:
+            products = products.filter(price__gte=Decimal(min_price))
+        except (InvalidOperation, ValueError):
+            pass
+
+    if max_price:
+        try:
+            products = products.filter(price__lte=Decimal(max_price))
+        except (InvalidOperation, ValueError):
+            pass
+
+    # APPLY STOCK STATUS FILTER
+    if stock_status == 'in_stock':
+        products = products.filter(quantity__gt=0)
+    elif stock_status == 'low_stock':
+        products = products.filter(quantity__gt=0, quantity__lte=5)
+    elif stock_status == 'out_of_stock':
+        products = products.filter(quantity__lte=0)
+
+    # APPLY SORTING
+    products = products.order_by(sort_by)
+
     return render(request, 'design/masterlist.html', {
         'products': products,
-        'category_filter': category_filter
+        'search_query': search_query,
+        'category_filter': category_filter,
+        'min_price': min_price,
+        'max_price': max_price,
+        'stock_status': stock_status,
+        'sort_by': sort_by,
+        'querystring': request.GET.urlencode(),
     })
 
 @login_required
 def edit_product(request, product_id):
     product = get_object_or_404(Product, id=product_id)
     category_filter = request.GET.get('category', '')
+    search_query = request.GET.get('search', '')
+    min_price = request.GET.get('min_price', '')
+    max_price = request.GET.get('max_price', '')
+    stock_status = request.GET.get('stock_status', '')
+    sort_by = request.GET.get('sort', '')
 
     if request.method == 'POST':
         name = request.POST.get('name')
@@ -201,7 +250,19 @@ def edit_product(request, product_id):
         except Exception as e:
             messages.error(request, f"Error updating product: {str(e)}")
 
-        return redirect(f'/category/?category={category_filter}')
+        query_params = {
+            'search': search_query,
+            'category': category_filter,
+            'min_price': min_price,
+            'max_price': max_price,
+            'stock_status': stock_status,
+            'sort': sort_by,
+        }
+        query_params = {k: v for k, v in query_params.items() if v}
+        query_string = urlencode(query_params)
+        if query_string:
+            return redirect(f"/category/?{query_string}")
+        return redirect('category')
 
     products = Product.objects.all().order_by('-created_at')
     return render(request, 'design/product.html', {
@@ -214,12 +275,29 @@ def edit_product(request, product_id):
 def delete_product(request, product_id):
     product = get_object_or_404(Product, id=product_id)
     category_filter = request.GET.get('category', '')
+    search_query = request.GET.get('search', '')
+    min_price = request.GET.get('min_price', '')
+    max_price = request.GET.get('max_price', '')
+    stock_status = request.GET.get('stock_status', '')
+    sort_by = request.GET.get('sort', '')
 
     if request.method == 'POST':
         product_name = product.name
         product.delete()
         messages.success(request, f"Product '{product_name}' deleted successfully!")
-        return redirect(f'/category/?category={category_filter}')
+        query_params = {
+            'search': search_query,
+            'category': category_filter,
+            'min_price': min_price,
+            'max_price': max_price,
+            'stock_status': stock_status,
+            'sort': sort_by,
+        }
+        query_params = {k: v for k, v in query_params.items() if v}
+        query_string = urlencode(query_params)
+        if query_string:
+            return redirect(f"/category/?{query_string}")
+        return redirect('category')
 
     return redirect('category')
 
@@ -284,7 +362,7 @@ def reorder_build(request, build_id):
 
     if not prefill_items:
         messages.error(request, "No items from this build are currently available to reorder.")
-        return redirect('checkout-history-detail', build_id=build.id)
+        return redirect(f"/pc-builder/history/{build.id}/?view={history_view}")
 
     request.session['prefill_build_items'] = prefill_items
     request.session['prefill_notes'] = notes
@@ -470,9 +548,6 @@ def checkout_history(request):
         build.display_number = total_listed_builds - index + 1
         build.item_count = build.items.count()
     
-    # Analytics calculations
-    from django.db.models import Sum, Count
-    
     total_builds = builds_qs.count()
     
     # Calculate total revenue using Python instead of Django ORM
@@ -502,10 +577,6 @@ def checkout_history(request):
         'most_popular_count': most_popular_count,
         'show_archived': show_archived,
     }
-    import sys
-    # Debug prints so you can see values when the page is requested
-    print(f"DEBUG checkout_history -> total_builds={total_builds}, total_revenue={total_revenue}, avg_order_value={avg_order_value}", file=sys.stderr)
-
     return render(request, 'design/checkout_history.html', context)
 
 @login_required

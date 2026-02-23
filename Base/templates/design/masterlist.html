@@ -1,4 +1,4 @@
-﻿{% load static humanize %}
+{% load static humanize %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -27,13 +27,13 @@
                 </div>
             </div>
             <ul class="nav-list">
-                <li><a href="{% url 'landing' %}">Dashboard <span>›</span></a></li>
-                <li><a href="{% url 'product' %}">Product Management <span>›</span></a></li>
-                <li><a class="active" href="{% url 'category' %}">Masterlist <span>›</span></a></li>
-                <li><a href="{% url 'pc-builder' %}">Price Quote <span>›</span></a></li>
-                <li><a href="{% url 'checkout-history' %}">Checkout History <span>›</span></a></li>
-                <li><a href="{% url 'profile-settings' %}">Profile Settings <span>›</span></a></li>
-                <li><a href="{% url 'logout' %}">Log out <span>›</span></a></li>
+                <li><a href="{% url 'landing' %}">Dashboard <span>&rsaquo;</span></a></li>
+                <li><a href="{% url 'product' %}">Product Management <span>&rsaquo;</span></a></li>
+                <li><a class="active" href="{% url 'category' %}">Masterlist <span>&rsaquo;</span></a></li>
+                <li><a href="{% url 'pc-builder' %}">Price Quote <span>&rsaquo;</span></a></li>
+                <li><a href="{% url 'checkout-history' %}">Checkout History <span>&rsaquo;</span></a></li>
+                <li><a href="{% url 'profile-settings' %}">Profile Settings <span>&rsaquo;</span></a></li>
+                <li><a href="{% url 'logout' %}">Log out <span>&rsaquo;</span></a></li>
             </ul>
         </aside>
 
@@ -44,21 +44,75 @@
                 <a href="{% url 'product' %}" class="btn btn-ghost">Product Management</a>
             </div>
             <h1 style="margin-top: 14px;">Masterlist</h1>
-            <p>Browse products by category and perform quick actions.</p>
+            <p>Browse products and use advanced filters.</p>
         </section>
 
         <section class="card">
-            <div class="actions" style="margin-bottom: 12px;">
-                <a href="?category=ram" class="btn {% if category_filter == 'ram' %}btn-primary{% else %}btn-ghost{% endif %}">RAM</a>
-                <a href="?category=motherboard" class="btn {% if category_filter == 'motherboard' %}btn-primary{% else %}btn-ghost{% endif %}">Motherboard</a>
-                <a href="?category=cpu" class="btn {% if category_filter == 'cpu' %}btn-primary{% else %}btn-ghost{% endif %}">CPU</a>
-                <a href="?category=gpu" class="btn {% if category_filter == 'gpu' %}btn-primary{% else %}btn-ghost{% endif %}">GPU</a>
-                <a href="?category=storage" class="btn {% if category_filter == 'storage' %}btn-primary{% else %}btn-ghost{% endif %}">Storage</a>
-                <a href="?category=psu" class="btn {% if category_filter == 'psu' %}btn-primary{% else %}btn-ghost{% endif %}">PSU</a>
-                <a href="?category=case" class="btn {% if category_filter == 'case' %}btn-primary{% else %}btn-ghost{% endif %}">Case</a>
-                <a href="{% url 'category' %}" class="btn btn-ghost">Clear</a>
-            </div>
+            <h2 class="card-title">Filters & Search</h2>
+            <form method="GET" class="forms-grid">
+                <div class="form-group">
+                    <label for="search">Search Product</label>
+                    <input id="search" type="text" name="search" value="{{ search_query }}" placeholder="Type product name...">
+                </div>
 
+                <div class="form-group">
+                    <label for="category">Category</label>
+                    <select id="category" name="category">
+                        <option value="">All Categories</option>
+                        <option value="ram" {% if category_filter == 'ram' %}selected{% endif %}>RAM</option>
+                        <option value="motherboard" {% if category_filter == 'motherboard' %}selected{% endif %}>Motherboard</option>
+                        <option value="cpu" {% if category_filter == 'cpu' %}selected{% endif %}>CPU</option>
+                        <option value="gpu" {% if category_filter == 'gpu' %}selected{% endif %}>GPU</option>
+                        <option value="storage" {% if category_filter == 'storage' %}selected{% endif %}>Storage</option>
+                        <option value="psu" {% if category_filter == 'psu' %}selected{% endif %}>Power Supply</option>
+                        <option value="case" {% if category_filter == 'case' %}selected{% endif %}>Case</option>
+                    </select>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label for="min_price">Min Price</label>
+                        <input type="number" id="min_price" name="min_price" step="0.01" value="{{ min_price }}" placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label for="max_price">Max Price</label>
+                        <input type="number" id="max_price" name="max_price" step="0.01" value="{{ max_price }}" placeholder="Any">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="stock_status">Stock Status</label>
+                    <select id="stock_status" name="stock_status">
+                        <option value="">All Items</option>
+                        <option value="in_stock" {% if stock_status == 'in_stock' %}selected{% endif %}>In Stock</option>
+                        <option value="low_stock" {% if stock_status == 'low_stock' %}selected{% endif %}>Low Stock (=5)</option>
+                        <option value="out_of_stock" {% if stock_status == 'out_of_stock' %}selected{% endif %}>Out of Stock</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="sort">Sort By</label>
+                    <select id="sort" name="sort">
+                        <option value="-created_at" {% if sort_by == '-created_at' %}selected{% endif %}>Newest First</option>
+                        <option value="created_at" {% if sort_by == 'created_at' %}selected{% endif %}>Oldest First</option>
+                        <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name (A-Z)</option>
+                        <option value="-name" {% if sort_by == '-name' %}selected{% endif %}>Name (Z-A)</option>
+                        <option value="-price" {% if sort_by == '-price' %}selected{% endif %}>Price (High to Low)</option>
+                        <option value="price" {% if sort_by == 'price' %}selected{% endif %}>Price (Low to High)</option>
+                        <option value="-quantity" {% if sort_by == '-quantity' %}selected{% endif %}>Quantity (Highest)</option>
+                        <option value="quantity" {% if sort_by == 'quantity' %}selected{% endif %}>Quantity (Lowest)</option>
+                    </select>
+                </div>
+
+                <div class="actions">
+                    <button type="submit" class="btn btn-primary">Apply Filters</button>
+                    <a href="{% url 'category' %}" class="btn btn-ghost">Clear All</a>
+                </div>
+            </form>
+        </section>
+
+        <section class="card">
+            <h2 class="card-title">Masterlist</h2>
             <div class="table-wrap">
                 <table>
                     <thead>
@@ -81,8 +135,8 @@
                             <td>{{ product.quantity }}</td>
                             <td>
                                 <div class="actions">
-                                    <a href="{% url 'edit-product' product.id %}?category={{ category_filter }}" class="btn btn-ghost">Edit</a>
-                                    <form method="POST" action="{% url 'delete-product' product.id %}?category={{ category_filter }}" style="display:inline;">
+                                    <a href="{% url 'edit-product' product.id %}{% if querystring %}?{{ querystring }}{% endif %}" class="btn btn-ghost">Edit</a>
+                                    <form method="POST" action="{% url 'delete-product' product.id %}{% if querystring %}?{{ querystring }}{% endif %}" style="display:inline;">
                                         {% csrf_token %}
                                         <button type="submit" class="btn btn-danger" onclick="return confirm('Delete {{ product.name }}?')">Delete</button>
                                     </form>

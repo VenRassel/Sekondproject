@@ -10,7 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/ui.css' %}">
 </head>
-<body>
+<body class="profile-settings-page">
 <div class="page">
     <div class="app-shell">
         <aside class="sidebar">
@@ -38,29 +38,51 @@
         </aside>
 
         <main class="main-panel">
-        <section class="topbar profile-header">
-            <div class="actions">
-                <a href="{% url 'landing' %}" class="btn btn-ghost">Back to Dashboard</a>
+        <section class="topbar profile-header profile-header-modern">
+            <div class="profile-header-grid">
+                <div class="profile-header-copy">
+                    <div class="actions">
+                        <a href="{% url 'landing' %}" class="btn btn-ghost">Back to Dashboard</a>
+                    </div>
+                    <h1>Profile Settings</h1>
+                    <p>Manage your account and profile information.</p>
+                    <div class="profile-header-meta">
+                        <span class="meta-pill">@{{ user.username }}</span>
+                        <span class="meta-pill">{{ user.profile.role|default:"User"|title }}</span>
+                    </div>
+                </div>
+                <div class="profile-status-tile">
+                    <p class="profile-status-label">Account Health</p>
+                    <strong>100%</strong>
+                    <span>Profile is active and editable.</span>
+                </div>
             </div>
-            <h1>Profile Settings</h1>
-            <p>Manage your account and profile information.</p>
         </section>
 
         <section class="profile-settings-grid">
-            <article class="card profile-preview-card">
+            <article class="card profile-preview-card profile-preview-modern">
                 <h2 class="card-title">Profile Preview</h2>
                 <div class="profile-preview">
                     {% if user.profile.profile_picture %}
-                        <img src="{{ user.profile.profile_picture.url }}" alt="Profile picture" class="profile-preview-avatar">
+                        <img src="{{ user.profile.profile_picture.url }}" alt="Profile picture" class="profile-preview-avatar" id="profile_preview_avatar">
                     {% else %}
-                        <div class="profile-preview-avatar profile-preview-fallback">{{ user.first_name|first|default:user.username|first|upper }}</div>
+                        <div class="profile-preview-avatar profile-preview-fallback" id="profile_preview_fallback">{{ user.first_name|first|default:user.username|first|upper }}</div>
+                        <img src="" alt="Profile picture preview" class="profile-preview-avatar profile-preview-avatar-hidden" id="profile_preview_avatar">
                     {% endif %}
                     <h3>{% if user.first_name or user.last_name %}{{ user.first_name }} {{ user.last_name }}{% else %}{{ user.username }}{% endif %}</h3>
                     <p>{{ user.email|default:"No email added yet" }}</p>
+                    <div class="profile-badges">
+                        <span>{{ user.profile.role|default:"User"|title }}</span>
+                        <span>Account Active</span>
+                    </div>
                 </div>
+                <ul class="profile-help-list">
+                    <li>Use a clear photo so teammates can identify you quickly.</li>
+                    <li>Keep your email updated for password recovery.</li>
+                </ul>
             </article>
 
-            <article class="card">
+            <article class="card profile-editor-card">
                 <h2 class="card-title">Edit Profile</h2>
                 <p class="muted profile-form-note">Update account and profile details in one form.</p>
 
@@ -76,14 +98,17 @@
                         <div class="form-group">
                             <label for="id_email">Email Address</label>
                             {{ u_form.email }}
+                            {% if u_form.email.errors %}<small class="field-error">{{ u_form.email.errors|striptags }}</small>{% endif %}
                         </div>
                         <div class="form-group">
                             <label for="id_first_name">First Name</label>
                             {{ u_form.first_name }}
+                            {% if u_form.first_name.errors %}<small class="field-error">{{ u_form.first_name.errors|striptags }}</small>{% endif %}
                         </div>
                         <div class="form-group">
                             <label for="id_last_name">Last Name</label>
                             {{ u_form.last_name }}
+                            {% if u_form.last_name.errors %}<small class="field-error">{{ u_form.last_name.errors|striptags }}</small>{% endif %}
                         </div>
                     </div>
 
@@ -91,7 +116,11 @@
                         <h3>Profile Information</h3>
                         <div class="form-group">
                             <label for="id_profile_picture">Profile Picture</label>
-                            <input type="file" name="profile_picture" id="id_profile_picture" accept="image/*">
+                            <div class="profile-upload-shell" id="profile_upload_shell">
+                                <p class="upload-title">Drop image here or browse</p>
+                                <p class="upload-subtitle">PNG or JPG works best for avatars.</p>
+                                <input type="file" name="profile_picture" id="id_profile_picture" accept="image/*">
+                            </div>
                             {% if user.profile.profile_picture %}
                                 <small class="profile-file-meta">
                                     Current:
@@ -104,6 +133,8 @@
                                     Remove current photo
                                 </label>
                             {% endif %}
+                            {% if p_form.profile_picture.errors %}<small class="field-error">{{ p_form.profile_picture.errors|striptags }}</small>{% endif %}
+                            <small class="profile-file-meta" id="profile_file_selected">No new file selected</small>
                         </div>
                     </div>
 
@@ -134,6 +165,47 @@
                 if(confirm('Are you sure you want to log out?')){
                     window.location.href = logoutUrl;
                 }
+            }
+        });
+    }catch(err){console && console.error && console.error(err)}
+})();
+
+// Live avatar and filename preview
+(function(){
+    try{
+        var input = document.getElementById('id_profile_picture');
+        var avatar = document.getElementById('profile_preview_avatar');
+        var fallback = document.getElementById('profile_preview_fallback');
+        var fileMeta = document.getElementById('profile_file_selected');
+        var uploadShell = document.getElementById('profile_upload_shell');
+        if(!input || !avatar || !fileMeta) return;
+
+        if(uploadShell){
+            ['dragenter', 'dragover'].forEach(function(eventName){
+                uploadShell.addEventListener(eventName, function(){
+                    uploadShell.classList.add('is-dragover');
+                });
+            });
+            ['dragleave', 'drop'].forEach(function(eventName){
+                uploadShell.addEventListener(eventName, function(){
+                    uploadShell.classList.remove('is-dragover');
+                });
+            });
+        }
+
+        input.addEventListener('change', function(){
+            var file = input.files && input.files[0];
+            if(!file){
+                fileMeta.textContent = 'No new file selected';
+                return;
+            }
+
+            fileMeta.textContent = 'Selected: ' + file.name;
+            var objectUrl = URL.createObjectURL(file);
+            avatar.src = objectUrl;
+            avatar.classList.remove('profile-preview-avatar-hidden');
+            if(fallback){
+                fallback.classList.add('profile-preview-avatar-hidden');
             }
         });
     }catch(err){console && console.error && console.error(err)}
