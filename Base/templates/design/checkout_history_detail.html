@@ -7,7 +7,7 @@
     <title>Checkout Detail</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/ui.css' %}">
 </head>
 <body>
@@ -37,8 +37,8 @@
             </ul>
         </aside>
 
-        <main class="main-panel">
-            <section class="topbar">
+        <main class="main-panel main-panel-compact">
+            <section class="topbar topbar-compact">
                 <div class="actions">
                     <a class="btn btn-ghost" href="{% url 'checkout-history' %}?view={{ history_view }}">Back to History</a>
                     <a class="btn btn-ghost" href="{% url 'pc-builder' %}">Back to PC Builder</a>
@@ -47,7 +47,7 @@
                     <form method="post" action="{% url 'restore-build' build.id %}" style="display:inline; margin:0;">
                         {% csrf_token %}
                         <input type="hidden" name="next_view" value="{{ history_view }}">
-                        <button type="submit" class="btn btn-ghost">Restore</button>
+                        <button type="submit" class="btn btn-restore">Restore</button>
                     </form>
                     {% else %}
                     <form method="post" action="{% url 'archive-build' build.id %}" style="display:inline; margin:0;">
@@ -57,7 +57,7 @@
                     </form>
                     {% endif %}
                 </div>
-                <h1 style="margin-top: 14px;">Checkout Build #{{ build.id }}</h1>
+                <h1>Checkout Build #{{ build.id }}</h1>
                 <p>View details of this PC build checkout.</p>
             </section>
 
@@ -188,6 +188,7 @@
     }catch(err){console && console.error && console.error(err)}
 })();
 </script>
+
 
 
 

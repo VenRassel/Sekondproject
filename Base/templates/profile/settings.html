@@ -1,4 +1,4 @@
-﻿{% load static %}
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,7 +7,7 @@
     <title>Profile Settings</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/ui.css' %}">
 </head>
 <body class="profile-settings-page">
@@ -27,35 +27,25 @@
                 </div>
             </div>
             <ul class="nav-list">
-                <li><a href="{% url 'landing' %}">Dashboard <span>›</span></a></li>
-                <li><a href="{% url 'product' %}">Product Management <span>›</span></a></li>
-                <li><a href="{% url 'category' %}">Masterlist <span>›</span></a></li>
-                <li><a href="{% url 'pc-builder' %}">Price Quote <span>›</span></a></li>
-                <li><a href="{% url 'checkout-history' %}">Checkout History <span>›</span></a></li>
-                <li><a class="active" href="{% url 'profile-settings' %}">Profile Settings <span>›</span></a></li>
-                <li><a href="{% url 'logout' %}">Log out <span>›</span></a></li>
+                <li><a href="{% url 'landing' %}">Dashboard <span>&rsaquo;</span></a></li>
+                <li><a href="{% url 'product' %}">Product Management <span>&rsaquo;</span></a></li>
+                <li><a href="{% url 'category' %}">Masterlist <span>&rsaquo;</span></a></li>
+                <li><a href="{% url 'pc-builder' %}">Price Quote <span>&rsaquo;</span></a></li>
+                <li><a href="{% url 'checkout-history' %}">Checkout History <span>&rsaquo;</span></a></li>
+                <li><a class="active" href="{% url 'profile-settings' %}">Profile Settings <span>&rsaquo;</span></a></li>
+                <li><a href="{% url 'logout' %}">Log out <span>&rsaquo;</span></a></li>
             </ul>
         </aside>
 
-        <main class="main-panel">
-        <section class="topbar profile-header profile-header-modern">
-            <div class="profile-header-grid">
-                <div class="profile-header-copy">
-                    <div class="actions">
-                        <a href="{% url 'landing' %}" class="btn btn-ghost">Back to Dashboard</a>
-                    </div>
-                    <h1>Profile Settings</h1>
-                    <p>Manage your account and profile information.</p>
-                    <div class="profile-header-meta">
-                        <span class="meta-pill">@{{ user.username }}</span>
-                        <span class="meta-pill">{{ user.profile.role|default:"User"|title }}</span>
-                    </div>
-                </div>
-                <div class="profile-status-tile">
-                    <p class="profile-status-label">Account Health</p>
-                    <strong>100%</strong>
-                    <span>Profile is active and editable.</span>
-                </div>
+        <main class="main-panel main-panel-compact">
+        <section class="topbar topbar-compact profile-topbar-modern">
+            <div class="actions">
+                <a href="{% url 'landing' %}" class="btn btn-ghost">Back to Dashboard</a>
+                <a href="{% url 'checkout-history' %}" class="btn btn-ghost">Checkout History</a>
+            </div>
+            <div class="profile-header-copy">
+                <h1>Profile Settings</h1>
+                <p>Manage your account details, identity, and recovery information in one place.</p>
             </div>
         </section>
 
@@ -76,9 +66,32 @@
                         <span>Account Active</span>
                     </div>
                 </div>
+                <div class="profile-preview-stats">
+                    <div class="profile-status-tile">
+                        <p class="profile-status-label">Profile</p>
+                        <strong>
+                            {% if user.first_name and user.last_name and user.email and user.profile.profile_picture %}
+                                100%
+                            {% elif user.first_name and user.last_name and user.email %}
+                                85%
+                            {% elif user.email %}
+                                60%
+                            {% else %}
+                                40%
+                            {% endif %}
+                        </strong>
+                        <span>Completion target</span>
+                    </div>
+                    <div class="profile-status-tile">
+                        <p class="profile-status-label">Security</p>
+                        <strong>{% if user.email %}Good{% else %}Needs Update{% endif %}</strong>
+                        <span>{% if user.email %}Keep contact info updated{% else %}Add an email for recovery{% endif %}</span>
+                    </div>
+                </div>
                 <ul class="profile-help-list">
-                    <li>Use a clear photo so teammates can identify you quickly.</li>
-                    <li>Keep your email updated for password recovery.</li>
+                    <li>Use a clear profile photo so teammates can identify you quickly.</li>
+                    <li>Keep your email current for account recovery and important notifications.</li>
+                    <li>Review your details monthly to keep account records accurate.</li>
                 </ul>
             </article>
 
@@ -139,7 +152,7 @@
                     </div>
 
                     <div class="profile-form-actions">
-                        <button type="submit" class="btn btn-primary">Save Profile Changes</button>
+                        <button type="submit" class="btn btn-primary btn-save-profile">Save Profile Changes</button>
                     </div>
                 </form>
             </article>
@@ -211,4 +224,5 @@
     }catch(err){console && console.error && console.error(err)}
 })();
 </script>
+
 

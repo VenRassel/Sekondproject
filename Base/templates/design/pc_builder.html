@@ -7,7 +7,7 @@
     <title>PC Builder</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/ui.css' %}">
 </head>
 <body>
@@ -37,13 +37,13 @@
             </ul>
         </aside>
 
-        <main class="main-panel">
-        <section class="topbar builder-topbar">
+        <main class="main-panel main-panel-compact">
+        <section class="topbar topbar-compact">
             <div class="actions">
                 <a href="{% url 'landing' %}" class="btn btn-ghost">Back to Home</a>
                 <a href="{% url 'checkout-history' %}" class="btn btn-ghost">Checkout History</a>
             </div>
-            <h1 style="margin-top: 14px;">PC Builder</h1>
+            <h1>PC Builder</h1>
             <p>Create a quote by selecting parts and quantities by category.</p>
         </section>
 
@@ -371,6 +371,7 @@ document.querySelector('form[action*="checkout"]').addEventListener("submit", fu
     }catch(err){console && console.error && console.error(err)}
 })();
 </script>
+
 
 
 

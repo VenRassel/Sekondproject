@@ -7,7 +7,7 @@
     <title>Checkout History</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/ui.css' %}">
 </head>
 <body>
@@ -37,13 +37,13 @@
             </ul>
         </aside>
 
-        <main class="main-panel">
-        <section class="topbar">
+        <main class="main-panel main-panel-compact">
+        <section class="topbar topbar-compact">
             <div class="actions">
                 <a class="btn btn-ghost" href="{% url 'landing' %}">Back to Home</a>
                 <a class="btn btn-ghost" href="{% url 'pc-builder' %}">Back to PC Builder</a>
             </div>
-            <h1 style="margin-top: 14px;">Checkout History</h1>
+            <h1>Checkout History</h1>
             <p>All checked out builds and performance analytics.</p>
         </section>
 
@@ -106,7 +106,7 @@
                                     <form method="post" action="{% url 'restore-build' build.id %}" style="display:inline; margin:0;">
                                         {% csrf_token %}
                                         <input type="hidden" name="next_view" value="archived">
-                                        <button type="submit" class="btn btn-ghost">Restore</button>
+                                        <button type="submit" class="btn btn-restore">Restore</button>
                                     </form>
                                     {% else %}
                                     <form method="post" action="{% url 'archive-build' build.id %}" style="display:inline; margin:0;">
@@ -132,6 +132,25 @@
                     </tbody>
                 </table>
             </div>
+            {% if builds.has_other_pages %}
+            <div class="pagination pagination-modern">
+                <div class="pagination-slot">
+                    {% if builds.has_previous %}
+                    <a class="btn btn-page" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ builds.previous_page_number }}">&larr; Previous</a>
+                    {% else %}
+                    <span class="btn btn-page is-disabled" aria-disabled="true">&larr; Previous</span>
+                    {% endif %}
+                </div>
+                <span class="pagination-info">Page {{ builds.number }} of {{ builds.paginator.num_pages }}</span>
+                <div class="pagination-slot pagination-slot-end">
+                    {% if builds.has_next %}
+                    <a class="btn btn-page" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ builds.next_page_number }}">Next &rarr;</a>
+                    {% else %}
+                    <span class="btn btn-page is-disabled" aria-disabled="true">Next &rarr;</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
         </section>
         </main>
     </div>
@@ -159,6 +178,5 @@
     }catch(err){console && console.error && console.error(err)}
 })();
 </script>
-
 
 

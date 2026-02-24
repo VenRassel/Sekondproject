@@ -1,38 +1,44 @@
-﻿# Base/views.py
+# Base/views.py
 import json
+from datetime import timedelta
 from decimal import Decimal, InvalidOperation
-from urllib.parse import urlencode
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from django.contrib.auth import login, logout
-from django.contrib.auth.forms import AuthenticationForm
+from django.core.exceptions import ValidationError
+from .models import Product
+from .models import Product, CATEGORY_CHOICES
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from .models import Profile
+from .forms import SignUpForm
+from django.contrib.auth import login
+from .models import PCBuild, PCBuildItem, StockMovement
 from django.db import transaction
 from django.db.models import Count, Sum
 from django.db.models.functions import TruncMonth
+from django.shortcuts import redirect, get_object_or_404
 from django.utils import timezone
-
-from .models import Product
-from .forms import SignUpForm
-from .models import PCBuild, PCBuildItem, StockMovement
 
 # new imports
 from .forms import UserUpdateForm, ProfileUpdateForm
 
+def _normalized_text(value):
+    return " ".join((value or '').split()).casefold()
+
+def _querystring_without_page(request):
+    params = request.GET.copy()
+    params.pop('page', None)
+    return params.urlencode()
+
 @login_required
 def landing(request):
     products = Product.objects.all().order_by('-created_at')
-
-    def add_months(base_dt, delta_months):
-        month_index = (base_dt.month - 1) + delta_months
-        year = base_dt.year + (month_index // 12)
-        month = (month_index % 12) + 1
-        return base_dt.replace(year=year, month=month, day=1)
-
     now = timezone.now()
     months_back = 6
-    current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    start_month = add_months(current_month, -(months_back - 1))
+    start_date = now - timedelta(days=30 * (months_back - 1))
+    start_month = start_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
     monthly_analytics = (
         PCBuild.objects.filter(status='checked_out', created_at__gte=start_month)
@@ -56,8 +62,8 @@ def landing(request):
     chart_labels = []
     chart_revenue = []
     chart_builds = []
-    for offset in range(-(months_back - 1), 1):
-        month_date = add_months(current_month, offset)
+    for offset in range(months_back - 1, -1, -1):
+        month_date = (now - timedelta(days=30 * offset)).replace(day=1)
         month_key = month_date.strftime('%b %Y')
         chart_labels.append(month_key)
         month_data = monthly_map.get(month_key, {'revenue': 0.0, 'builds': 0})
@@ -122,21 +128,25 @@ def product(request):
     
     # APPLY SORTING
     products = products.order_by(sort_by)
+    paginator = Paginator(products, 10)
+    products_page = paginator.get_page(request.GET.get('page'))
+    querystring = _querystring_without_page(request)
 
     return render(request, 'design/product.html', {
-        'products': products,
+        'products': products_page,
         'search_query': search_query,
         'category_filter': category_filter,
         'min_price': min_price,
         'max_price': max_price,
         'stock_status': stock_status,
         'sort_by': sort_by,
+        'querystring': querystring,
     })
 
 @login_required
 def add_product(request):
     if request.method == 'POST':
-        name = request.POST.get('name')
+        name = request.POST.get('name', '')
         description = request.POST.get('description', '')
         price = request.POST.get('price')
         quantity = request.POST.get('quantity', 0)
@@ -146,15 +156,34 @@ def add_product(request):
             messages.error(request, "Product name and price are required.")
             return redirect('product')
 
+        normalized_name = _normalized_text(name)
+        normalized_description = _normalized_text(description)
+        duplicate_exists = any(
+            _normalized_text(product.name) == normalized_name and
+            _normalized_text(product.description) == normalized_description
+            for product in Product.objects.filter(category=category).only('name', 'description')
+        )
+
+        if duplicate_exists:
+            messages.error(
+                request,
+                "A product with the same name, description, and category already exists.",
+            )
+            return redirect('product')
+
         try:
-            Product.objects.create(
+            product = Product(
                 name=name,
                 description=description,
                 price=price,
                 quantity=int(quantity) if quantity else 0,
                 category=category
             )
+            product.full_clean()
+            product.save()
             messages.success(request, f"Product '{name}' added successfully!")
+        except ValidationError as e:
+            messages.error(request, "; ".join(e.messages))
         except Exception as e:
             messages.error(request, f"Error adding product: {str(e)}")
 
@@ -165,8 +194,6 @@ def add_product(request):
 @login_required
 def category(request):
     products = Product.objects.all()
-
-    # GET filters
     search_query = request.GET.get('search', '')
     category_filter = request.GET.get('category', '')
     min_price = request.GET.get('min_price', '')
@@ -174,15 +201,12 @@ def category(request):
     stock_status = request.GET.get('stock_status', '')
     sort_by = request.GET.get('sort', '-created_at')
 
-    # APPLY SEARCH FILTER
     if search_query:
         products = products.filter(name__icontains=search_query)
 
-    # APPLY CATEGORY FILTER
     if category_filter:
         products = products.filter(category=category_filter)
 
-    # APPLY PRICE FILTERS
     if min_price:
         try:
             products = products.filter(price__gte=Decimal(min_price))
@@ -195,7 +219,6 @@ def category(request):
         except (InvalidOperation, ValueError):
             pass
 
-    # APPLY STOCK STATUS FILTER
     if stock_status == 'in_stock':
         products = products.filter(quantity__gt=0)
     elif stock_status == 'low_stock':
@@ -203,32 +226,28 @@ def category(request):
     elif stock_status == 'out_of_stock':
         products = products.filter(quantity__lte=0)
 
-    # APPLY SORTING
     products = products.order_by(sort_by)
+    paginator = Paginator(products, 10)
+    products_page = paginator.get_page(request.GET.get('page'))
+    querystring = _querystring_without_page(request)
 
     return render(request, 'design/masterlist.html', {
-        'products': products,
+        'products': products_page,
         'search_query': search_query,
         'category_filter': category_filter,
         'min_price': min_price,
         'max_price': max_price,
         'stock_status': stock_status,
         'sort_by': sort_by,
-        'querystring': request.GET.urlencode(),
+        'querystring': querystring,
     })
 
 @login_required
 def edit_product(request, product_id):
     product = get_object_or_404(Product, id=product_id)
-    category_filter = request.GET.get('category', '')
-    search_query = request.GET.get('search', '')
-    min_price = request.GET.get('min_price', '')
-    max_price = request.GET.get('max_price', '')
-    stock_status = request.GET.get('stock_status', '')
-    sort_by = request.GET.get('sort', '')
 
     if request.method == 'POST':
-        name = request.POST.get('name')
+        name = request.POST.get('name', '')
         description = request.POST.get('description', '')
         price = request.POST.get('price')
         quantity = request.POST.get('quantity', 0)
@@ -236,7 +255,7 @@ def edit_product(request, product_id):
 
         if not name or not price:
             messages.error(request, "Product name and price are required.")
-            return redirect('category')
+            return redirect('product')
 
         try:
             product.name = name
@@ -244,25 +263,16 @@ def edit_product(request, product_id):
             product.price = price
             product.quantity = int(quantity) if quantity else 0
             product.category = category
+            product.full_clean()
             product.save()
 
             messages.success(request, f"Product '{name}' updated successfully!")
+        except ValidationError as e:
+            messages.error(request, "; ".join(e.messages))
         except Exception as e:
             messages.error(request, f"Error updating product: {str(e)}")
 
-        query_params = {
-            'search': search_query,
-            'category': category_filter,
-            'min_price': min_price,
-            'max_price': max_price,
-            'stock_status': stock_status,
-            'sort': sort_by,
-        }
-        query_params = {k: v for k, v in query_params.items() if v}
-        query_string = urlencode(query_params)
-        if query_string:
-            return redirect(f"/category/?{query_string}")
-        return redirect('category')
+        return redirect('product')
 
     products = Product.objects.all().order_by('-created_at')
     return render(request, 'design/product.html', {
@@ -274,32 +284,14 @@ def edit_product(request, product_id):
 @login_required
 def delete_product(request, product_id):
     product = get_object_or_404(Product, id=product_id)
-    category_filter = request.GET.get('category', '')
-    search_query = request.GET.get('search', '')
-    min_price = request.GET.get('min_price', '')
-    max_price = request.GET.get('max_price', '')
-    stock_status = request.GET.get('stock_status', '')
-    sort_by = request.GET.get('sort', '')
 
     if request.method == 'POST':
         product_name = product.name
         product.delete()
         messages.success(request, f"Product '{product_name}' deleted successfully!")
-        query_params = {
-            'search': search_query,
-            'category': category_filter,
-            'min_price': min_price,
-            'max_price': max_price,
-            'stock_status': stock_status,
-            'sort': sort_by,
-        }
-        query_params = {k: v for k, v in query_params.items() if v}
-        query_string = urlencode(query_params)
-        if query_string:
-            return redirect(f"/category/?{query_string}")
-        return redirect('category')
+        return redirect('product')
 
-    return redirect('category')
+    return redirect('product')
 
 @login_required
 def pc_builder(request):
@@ -362,7 +354,7 @@ def reorder_build(request, build_id):
 
     if not prefill_items:
         messages.error(request, "No items from this build are currently available to reorder.")
-        return redirect(f"/pc-builder/history/{build.id}/?view={history_view}")
+        return redirect('checkout-history-detail', build_id=build.id)
 
     request.session['prefill_build_items'] = prefill_items
     request.session['prefill_notes'] = notes
@@ -539,20 +531,16 @@ def checkout_history(request):
     builds_qs = PCBuild.objects.filter(
         status='checked_out',
         is_archived=show_archived,
-    ).order_by('-created_at')
-    builds = list(builds_qs)
+    ).annotate(item_count=Count('items')).order_by('-created_at')
+    paginator = Paginator(builds_qs, 10)
+    builds_page = paginator.get_page(request.GET.get('page'))
     
-    # Add item_count to each build for display
-    total_listed_builds = len(builds)
-    for index, build in enumerate(builds, start=1):
-        build.display_number = total_listed_builds - index + 1
-        build.item_count = build.items.count()
-    
+    # Analytics calculations
     total_builds = builds_qs.count()
     
     # Calculate total revenue using Python instead of Django ORM
     total_revenue = Decimal('0.00')
-    for build in builds:
+    for build in builds_qs:
         total_revenue += build.total_price
     
     avg_order_value = total_revenue / total_builds if total_builds > 0 else Decimal('0.00')
@@ -568,15 +556,25 @@ def checkout_history(request):
             most_popular_item = popular['product__name']
             most_popular_count = popular['count']
     
+    total_listed_builds = total_builds
+    for page_index, build in enumerate(builds_page, start=1):
+        global_index = (builds_page.number - 1) * paginator.per_page + page_index
+        build.display_number = total_listed_builds - global_index + 1
+
     context = {
-        'builds': builds,
+        'builds': builds_page,
         'total_builds': total_builds,
         'total_revenue': float(total_revenue),
         'avg_order_value': float(avg_order_value),
         'most_popular_item': most_popular_item,
         'most_popular_count': most_popular_count,
         'show_archived': show_archived,
+        'querystring': _querystring_without_page(request),
     }
+    import sys
+    # Debug prints so you can see values when the page is requested
+    print(f"DEBUG checkout_history -> total_builds={total_builds}, total_revenue={total_revenue}, avg_order_value={avg_order_value}", file=sys.stderr)
+
     return render(request, 'design/checkout_history.html', context)
 
 @login_required

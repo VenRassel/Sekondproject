@@ -1,6 +1,9 @@
-﻿# Base/models.py
+# Base/models.py
+from decimal import Decimal
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 
 CATEGORY_CHOICES = [
     ('ram', 'RAM'),
@@ -15,11 +18,52 @@ CATEGORY_CHOICES = [
 class Product(models.Model):
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True, null=True)
-    price = models.DecimalField(max_digits=10, decimal_places=2)
-    quantity = models.IntegerField(default=0)
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+    )
+    quantity = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0)],
+    )
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='ram')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def clean(self):
+        normalized_name = " ".join((self.name or '').split())
+        normalized_description = " ".join((self.description or '').split())
+        if not normalized_name:
+            raise ValidationError({'name': 'Product name is required.'})
+        self.name = normalized_name
+        self.description = (self.description or '').strip()
+
+        if self.price is None:
+            raise ValidationError({'price': 'Price is required.'})
+        if self.price <= 0:
+            raise ValidationError({'price': 'Price must be greater than 0.'})
+
+        if self.quantity is None:
+            raise ValidationError({'quantity': 'Quantity is required.'})
+        if self.quantity < 0:
+            raise ValidationError({'quantity': 'Quantity cannot be negative.'})
+
+        duplicate_qs = Product.objects.filter(category=self.category)
+        if self.pk:
+            duplicate_qs = duplicate_qs.exclude(pk=self.pk)
+        normalized_name_key = normalized_name.casefold()
+        normalized_description_key = normalized_description.casefold()
+        for existing in duplicate_qs.only('name', 'description'):
+            existing_name = " ".join((existing.name or '').split()).casefold()
+            existing_description = " ".join((existing.description or '').split()).casefold()
+            if existing_name == normalized_name_key and existing_description == normalized_description_key:
+                raise ValidationError(
+                    {
+                        'name': 'A product with this name, description, and category already exists.',
+                        'description': 'A product with this name, description, and category already exists.',
+                    }
+                )
 
     def __str__(self):
         return self.name
@@ -100,5 +144,3 @@ class StockMovement(models.Model):
     def __str__(self):
         sign = '+' if self.quantity_change >= 0 else ''
         return f"{self.product.name} {sign}{self.quantity_change} ({self.reason})"
-
-
