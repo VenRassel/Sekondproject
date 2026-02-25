@@ -9,6 +9,187 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/ui.css' %}">
+    <style>
+        .status-toggle-btn {
+            border: 1px solid #cfd7ff;
+            background: #fff;
+            color: var(--primary);
+            box-shadow: none;
+        }
+
+        .status-toggle-btn.is-active {
+            background: linear-gradient(120deg, var(--primary), var(--primary-2));
+            border-color: transparent;
+            color: #fff;
+            box-shadow: 0 10px 20px rgba(63, 70, 182, 0.28);
+        }
+
+        .btn-delete-modern {
+            border: 1px solid #f3b4b4;
+            background: linear-gradient(135deg, #fff4f4, #ffe8e8);
+            color: #9b1c1c;
+            font-weight: 700;
+            box-shadow: 0 6px 14px rgba(179, 52, 52, 0.14);
+        }
+
+        .btn-delete-modern:hover {
+            background: linear-gradient(135deg, #ffe9e9, #ffd9d9);
+            transform: translateY(-1px);
+            box-shadow: 0 10px 18px rgba(179, 52, 52, 0.2);
+        }
+
+        .bulk-products-toolbar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .bulk-products-toolbar .bulk-action-select {
+            min-width: 220px;
+            border: 1px solid #ccd5f3;
+            border-radius: 12px;
+            padding: 10px 36px 10px 12px;
+            font-size: 14px;
+            background-color: #fff;
+            color: var(--text-strong);
+        }
+
+        .bulk-products-toolbar .bulk-action-select:focus {
+            outline: none;
+            border-color: #5f6af0;
+            box-shadow: 0 0 0 3px rgba(95, 106, 240, 0.18);
+        }
+
+        .bulk-products-toolbar #bulk-products-count {
+            font-weight: 600;
+        }
+
+        .row-actions {
+            position: relative;
+            display: inline-block;
+        }
+
+        .row-actions-toggle {
+            min-width: 42px;
+            min-height: 36px;
+            border-radius: 12px;
+            border: 1px solid #d3dbff;
+            background: linear-gradient(160deg, #fbfcff, #edf2ff);
+            color: #3f46b6;
+            font-size: 18px;
+            line-height: 1;
+            font-weight: 700;
+            box-shadow: 0 8px 16px rgba(63, 70, 182, 0.14);
+            padding: 6px 10px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+
+        .row-actions-toggle:hover {
+            transform: translateY(-1px);
+            border-color: #bfc9ff;
+            box-shadow: 0 12px 20px rgba(63, 70, 182, 0.2);
+        }
+
+        .row-actions-menu {
+            position: absolute;
+            right: 0;
+            top: calc(100% + 8px);
+            min-width: 196px;
+            border: 1px solid #dce4ff;
+            border-radius: 14px;
+            background: linear-gradient(170deg, rgba(255, 255, 255, 0.98), rgba(245, 248, 255, 0.96));
+            box-shadow: 0 18px 34px rgba(45, 61, 132, 0.2);
+            padding: 8px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-6px) scale(0.98);
+            pointer-events: none;
+            transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
+            z-index: 20;
+        }
+
+        .row-actions-menu.is-open {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0) scale(1);
+            pointer-events: auto;
+        }
+
+        .row-actions-menu::before {
+            content: "";
+            position: absolute;
+            inset: 0 0 auto 0;
+            height: 3px;
+            border-top-left-radius: 14px;
+            border-top-right-radius: 14px;
+            background: linear-gradient(90deg, #5b67ea, #6f7cff, #34d399);
+        }
+
+        .row-actions-item {
+            width: 100%;
+            border: none;
+            background: transparent;
+            color: #2e356d;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 700;
+            border-radius: 10px;
+            padding: 10px 11px;
+            cursor: pointer;
+            display: block;
+            transition: background-color 0.16s ease, transform 0.16s ease, color 0.16s ease;
+        }
+
+        .row-actions-item:hover {
+            background: #edf2ff;
+            color: #273492;
+            transform: translateX(1px);
+        }
+
+        .row-actions-item-edit::before {
+            content: "\270E";
+            margin-right: 8px;
+            color: #3f46b6;
+            font-size: 12px;
+        }
+
+        .row-actions-item-archive::before {
+            content: "\25EF";
+            margin-right: 8px;
+            color: #9a5600;
+            font-size: 12px;
+        }
+
+        .row-actions-item-restore::before {
+            content: "\2713";
+            margin-right: 8px;
+            color: #0d7f4f;
+            font-size: 12px;
+        }
+
+        .row-actions-item-danger {
+            color: #b42323;
+        }
+
+        .row-actions-item-danger:hover {
+            background: #fff2f2;
+            color: #8f1515;
+        }
+
+        .row-actions-item-danger::before {
+            content: "\2715";
+            margin-right: 8px;
+        }
+
+        @media (max-width: 720px) {
+            .row-actions-menu {
+                right: auto;
+                left: 0;
+            }
+        }
+    </style>
 </head>
 <body>
 <div class="page">
@@ -100,9 +281,15 @@
 
             <article class="card">
                 <h2 class="card-title">Filters & Search</h2>
+                <div class="actions" style="margin-bottom: 12px;">
+                    <button type="button" class="btn btn-ghost status-toggle-btn" data-value="active">Active</button>
+                    <button type="button" class="btn btn-ghost status-toggle-btn" data-value="archived">Archived</button>
+                    <button type="button" class="btn btn-ghost status-toggle-btn" data-value="all">All Records</button>
+                </div>
                 
                 <!-- Search Section -->
                 <form method="GET" class="forms-grid">
+                    <input type="hidden" name="archive_status" id="archive_status_input" value="{{ archive_status|default:'active' }}">
                     <div class="form-group">
                         <label for="search">Search Product</label>
                         <input id="search" type="text" name="search" value="{{ search_query }}" placeholder="Type product name...">
@@ -146,15 +333,6 @@
                         </select>
                     </div>
 
-                    <div class="form-group">
-                        <label for="archive_status">Record Status</label>
-                        <select id="archive_status" name="archive_status">
-                            <option value="active" {% if archive_status == 'active' %}selected{% endif %}>Active Only</option>
-                            <option value="archived" {% if archive_status == 'archived' %}selected{% endif %}>Archived Only</option>
-                            <option value="all" {% if archive_status == 'all' %}selected{% endif %}>All Records</option>
-                        </select>
-                    </div>
-                    
                     <!-- Sort Option -->
                     <div class="form-group">
                         <label for="sort">Sort By</label>
@@ -180,10 +358,25 @@
 
         <section class="card">
             <h2 class="card-title">Product List</h2>
+            <div class="bulk-products-toolbar">
+                <form id="bulk-products-form" method="post" action="{% url 'bulk-manage-products' %}" class="bulk-products-toolbar">
+                    {% csrf_token %}
+                    <input type="hidden" name="next_querystring" value="{{ querystring }}">
+                    <input type="hidden" name="confirm_delete" value="">
+                    <select name="bulk_action" class="bulk-action-select">
+                        <option value="archive">Archive Selected</option>
+                        <option value="restore">Restore Selected</option>
+                        <option value="delete">Delete Selected Permanently</option>
+                    </select>
+                    <button type="submit" class="btn btn-primary" onclick="return handleBulkProductSubmit()">Apply Bulk Action</button>
+                    <span class="muted" id="bulk-products-count">0 selected</span>
+                </form>
+            </div>
             <div class="table-wrap">
                 <table>
                     <thead>
                         <tr>
+                            <th><input type="checkbox" id="select-all-products" aria-label="Select all products"></th>
                             <th>Name</th>
                             <th>Description</th>
                             <th>Category</th>
@@ -197,6 +390,9 @@
                     <tbody>
                         {% for product in products %}
                         <tr>
+                            <td>
+                                <input type="checkbox" class="product-select-checkbox" name="selected_product_ids" value="{{ product.id }}" form="bulk-products-form" aria-label="Select {{ product.name }}">
+                            </td>
                             <td><strong>{{ product.name }}</strong></td>
                             <td>{{ product.description|default:"-" }}</td>
                             <td>{{ product.category|title }}</td>
@@ -205,31 +401,34 @@
                             <td>{% if product.is_archived %}<span class="muted">Archived</span>{% else %}<span class="text-success">Active</span>{% endif %}</td>
                             <td>{{ product.created_at|date:"M d, Y" }}</td>
                             <td>
-                                <div class="actions">
-                                    {% if not product.is_archived %}
-                                        <a href="{% url 'edit-product' product.id %}{% if querystring %}?{{ querystring }}{% endif %}" class="btn btn-ghost">Edit</a>
-                                        <form method="POST" action="{% url 'archive-product' product.id %}" style="display:inline;">
+                                <div class="row-actions">
+                                    <button type="button" class="row-actions-toggle" aria-label="Open actions menu">&#8942;</button>
+                                    <div class="row-actions-menu">
+                                        {% if not product.is_archived %}
+                                        <a href="{% url 'edit-product' product.id %}{% if querystring %}?{{ querystring }}{% endif %}" class="row-actions-item row-actions-item-edit">Edit</a>
+                                        <form method="POST" action="{% url 'archive-product' product.id %}">
                                             {% csrf_token %}
-                                            <button type="submit" class="btn btn-danger" onclick="return confirm('Archive {{ product.name }}?')">Archive</button>
+                                            <button type="submit" class="row-actions-item row-actions-item-archive" onclick="return confirm('Archive {{ product.name }}?')">Archive</button>
                                         </form>
-                                    {% else %}
-                                        <form method="POST" action="{% url 'restore-product' product.id %}" style="display:inline;">
+                                        {% else %}
+                                        <form method="POST" action="{% url 'restore-product' product.id %}">
                                             {% csrf_token %}
-                                            <button type="submit" class="btn btn-restore">Restore</button>
+                                            <button type="submit" class="row-actions-item row-actions-item-restore">Restore</button>
                                         </form>
-                                    {% endif %}
+                                        {% endif %}
                                     {% if not product.has_checkout_history %}
-                                    <form method="POST" action="{% url 'delete-product' product.id %}" style="display:inline;">
+                                    <form method="POST" action="{% url 'delete-product' product.id %}">
                                         {% csrf_token %}
-                                        <button type="submit" class="btn btn-ghost" onclick="return confirm('Permanently delete {{ product.name }}?')">Delete Permanently</button>
+                                        <button type="submit" class="row-actions-item row-actions-item-danger" onclick="return confirm('Permanently delete {{ product.name }}?')">Delete permanently</button>
                                     </form>
                                     {% endif %}
+                                    </div>
                                 </div>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="8" class="muted">No results found.</td>
+                            <td colspan="9" class="muted">No results found.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -262,6 +461,128 @@
 </html>
 
 <script>
+// Product record status segmented toggle
+(function(){
+    var hiddenInput = document.getElementById('archive_status_input');
+    var statusButtons = document.querySelectorAll('.status-toggle-btn');
+    if(!hiddenInput || !statusButtons.length) return;
+
+    function setActiveStatusButton(selectedValue){
+        statusButtons.forEach(function(btn){
+            if(btn.getAttribute('data-value') === selectedValue){
+                btn.classList.add('is-active');
+            }else{
+                btn.classList.remove('is-active');
+            }
+        });
+    }
+
+    setActiveStatusButton(hiddenInput.value || 'active');
+
+    statusButtons.forEach(function(btn){
+        btn.addEventListener('click', function(){
+            var value = btn.getAttribute('data-value');
+            hiddenInput.value = value;
+            setActiveStatusButton(value);
+        });
+    });
+})();
+
+function updateBulkProductsCount(){
+    var checkboxes = document.querySelectorAll('.product-select-checkbox');
+    var checked = document.querySelectorAll('.product-select-checkbox:checked');
+    var label = document.getElementById('bulk-products-count');
+    if(label){
+        label.textContent = checked.length + ' selected';
+    }
+    var selectAll = document.getElementById('select-all-products');
+    if(selectAll){
+        selectAll.checked = checkboxes.length > 0 && checked.length === checkboxes.length;
+        selectAll.indeterminate = checked.length > 0 && checked.length < checkboxes.length;
+    }
+}
+
+function handleBulkProductSubmit(){
+    var checked = document.querySelectorAll('.product-select-checkbox:checked');
+    if(checked.length === 0){
+        alert('Select at least one product first.');
+        return false;
+    }
+    var form = document.getElementById('bulk-products-form');
+    if(!form){
+        return false;
+    }
+    var action = form.querySelector('select[name="bulk_action"]').value;
+    if(action === 'delete'){
+        var typed = window.prompt('Type DELETE to permanently remove selected products.');
+        if(typed !== 'DELETE'){
+            alert('Bulk delete cancelled. You must type DELETE exactly.');
+            return false;
+        }
+        var confirmInput = form.querySelector('input[name="confirm_delete"]');
+        if(confirmInput){
+            confirmInput.value = typed;
+        }
+    }
+    return true;
+}
+
+(function(){
+    var selectAll = document.getElementById('select-all-products');
+    var checkboxes = document.querySelectorAll('.product-select-checkbox');
+    if(selectAll){
+        selectAll.addEventListener('change', function(){
+            checkboxes.forEach(function(box){ box.checked = selectAll.checked; });
+            updateBulkProductsCount();
+        });
+    }
+    checkboxes.forEach(function(box){
+        box.addEventListener('change', updateBulkProductsCount);
+    });
+    updateBulkProductsCount();
+})();
+
+// Row action dropdown menu
+(function(){
+    var rows = document.querySelectorAll('.row-actions');
+    if(!rows.length) return;
+
+    function closeAllMenus(){
+        rows.forEach(function(row){
+            var menu = row.querySelector('.row-actions-menu');
+            if(menu){
+                menu.classList.remove('is-open');
+            }
+        });
+    }
+
+    rows.forEach(function(row){
+        var toggle = row.querySelector('.row-actions-toggle');
+        var menu = row.querySelector('.row-actions-menu');
+        if(!toggle || !menu) return;
+
+        toggle.addEventListener('click', function(e){
+            e.stopPropagation();
+            var isOpen = menu.classList.contains('is-open');
+            closeAllMenus();
+            if(!isOpen){
+                menu.classList.add('is-open');
+            }
+        });
+
+        menu.addEventListener('click', function(e){
+            e.stopPropagation();
+        });
+    });
+
+    document.addEventListener('click', closeAllMenus);
+    document.addEventListener('keydown', function(e){
+        if(e.key === 'Escape'){
+            closeAllMenus();
+        }
+    });
+})();
+
 // Confirm before logging out
 (function(){
     try{

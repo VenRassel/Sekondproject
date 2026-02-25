@@ -6,6 +6,11 @@ from .models import Profile
 from django.contrib.auth.forms import UserCreationForm
 
 class UserUpdateForm(forms.ModelForm):
+    username = forms.CharField(
+        required=True,
+        max_length=150,
+        widget=forms.TextInput(attrs={'placeholder': 'Enter username'})
+    )
     first_name = forms.CharField(
         required=False, 
         max_length=30,
@@ -23,7 +28,14 @@ class UserUpdateForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'email']
+        fields = ['username', 'first_name', 'last_name', 'email']
+
+    def clean_username(self):
+        username = (self.cleaned_data.get('username') or '').strip()
+        duplicate_qs = User.objects.filter(username__iexact=username).exclude(pk=self.instance.pk)
+        if duplicate_qs.exists():
+            raise forms.ValidationError("This username is already taken.")
+        return username
 
 class ProfileUpdateForm(forms.ModelForm):
     class Meta:
@@ -36,6 +48,12 @@ class SignUpForm(UserCreationForm):
     class Meta:
         model = User
         fields = ['username', 'email', 'password1', 'password2']
+
+    def clean_email(self):
+        email = (self.cleaned_data.get('email') or '').strip()
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError("This email is already in use.")
+        return email
 
 class EmailAuthenticationForm(forms.Form):
     email = forms.EmailField(

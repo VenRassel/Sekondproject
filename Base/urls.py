@@ -11,6 +11,7 @@ urlpatterns = [
     path('delete_product/<int:product_id>/', views.delete_product, name='delete-product'),
     path('archive_product/<int:product_id>/', views.archive_product, name='archive-product'),
     path('restore_product/<int:product_id>/', views.restore_product, name='restore-product'),
+    path('product/bulk-action/', views.bulk_manage_products, name='bulk-manage-products'),
     path('pc_builder/', views.pc_builder, name='pc-builder'),
 
     # auth
@@ -19,12 +20,7 @@ urlpatterns = [
     path('signup/', views.signup_view, name='signup'),
     path(
         'forgot-password/',
-        auth_views.PasswordResetView.as_view(
-            template_name='auth/forgot_password_form.html',
-            email_template_name='auth/forgot_password_email.html',
-            subject_template_name='auth/forgot_password_subject.txt',
-            success_url='/forgot-password/done/',
-        ),
+        views.ForgotPasswordView.as_view(),
         name='forgot_password',
     ),
     path(
@@ -55,8 +51,10 @@ urlpatterns = [
 
     path('pc-builder/checkout/', views.checkout_pc_build, name='checkout_pc_build'),
     path('pc-builder/history/', views.checkout_history, name='checkout-history'),
+    path('pc-builder/history/bulk-action/', views.bulk_manage_builds, name='bulk-manage-builds'),
     path('pc-builder/history/<int:build_id>/', views.checkout_history_detail, name='checkout-history-detail'),
     path('pc-builder/history/<int:build_id>/archive/', views.archive_build, name='archive-build'),
     path('pc-builder/history/<int:build_id>/restore/', views.restore_build, name='restore-build'),
+    path('pc-builder/history/<int:build_id>/delete/', views.delete_build, name='delete-build'),
     path('pc-builder/reorder/<int:build_id>/', views.reorder_build, name='reorder-build'),
 ]

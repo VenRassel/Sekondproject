@@ -3,19 +3,26 @@ import json
 from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 from functools import wraps
+from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.core.exceptions import ValidationError
+from django.core.cache import cache
 from .models import Product
 from .models import Product, CATEGORY_CHOICES
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.contrib.auth.views import PasswordResetView
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.http import HttpResponseForbidden
+from django.middleware.csrf import get_token
+from django.urls import reverse_lazy
 from .models import Profile
 from .forms import SignUpForm
 from django.contrib.auth import login
-from .models import PCBuild, PCBuildItem, StockMovement
+from .models import AuditLog, PCBuild, PCBuildItem, StockMovement
 from django.db import transaction
 from django.db.models.deletion import ProtectedError
 from django.db.models import Count, Exists, OuterRef, Sum
@@ -38,6 +45,55 @@ def _is_admin(user):
     profile = getattr(user, 'profile', None)
     return bool(user.is_authenticated and profile and profile.role == 'admin')
 
+def _get_client_ip(request):
+    forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if forwarded_for:
+        return forwarded_for.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR', '')
+
+def _consume_rate_limit(scope, key, limit, window_seconds):
+    cache_key = f"rate_limit:{scope}:{key}"
+    attempts = cache.get(cache_key, 0)
+    if attempts >= limit:
+        return False
+
+    if attempts == 0:
+        cache.set(cache_key, 1, timeout=window_seconds)
+    else:
+        try:
+            cache.incr(cache_key)
+        except ValueError:
+            cache.set(cache_key, attempts + 1, timeout=window_seconds)
+    return True
+
+def _clear_rate_limit(scope, key):
+    cache.delete(f"rate_limit:{scope}:{key}")
+
+def _create_audit_log(request, action, status, user=None, identifier='', metadata=None):
+    AuditLog.objects.create(
+        user=user,
+        action=action,
+        status=status,
+        identifier=identifier or '',
+        ip_address=_get_client_ip(request),
+        metadata=metadata or {},
+    )
+
+
+def csrf_failure(request, reason=''):
+    """
+    Recover gracefully from stale/missing CSRF token on login-like pages.
+    Instead of showing raw 403 in dev flows, redirect to a fresh GET so the
+    browser receives a new CSRF cookie + token pair.
+    """
+    login_like_paths = {'/admin/login/', '/login/'}
+    if request.method == 'POST' and request.path in login_like_paths:
+        # Force creation/rotation of token on the next page load.
+        get_token(request)
+        return redirect(f"{request.path}?csrf=refresh")
+
+    return HttpResponseForbidden("CSRF verification failed. Please refresh and try again.")
+
 def admin_required(view_func):
     @wraps(view_func)
     @login_required
@@ -47,6 +103,42 @@ def admin_required(view_func):
             return redirect('landing')
         return view_func(request, *args, **kwargs)
     return _wrapped_view
+
+
+class ForgotPasswordView(PasswordResetView):
+    template_name = 'auth/forgot_password_form.html'
+    email_template_name = 'auth/forgot_password_email.html'
+    subject_template_name = 'auth/forgot_password_subject.txt'
+    success_url = reverse_lazy('forgot_password_done')
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.method == 'POST':
+            email = (request.POST.get('email') or '').strip().casefold()
+            ip_address = _get_client_ip(request)
+            limit = int(getattr(settings, 'FORGOT_PASSWORD_RATE_LIMIT_ATTEMPTS', 3))
+            window = int(getattr(settings, 'FORGOT_PASSWORD_RATE_LIMIT_WINDOW_SECONDS', 900))
+            rate_key = f"{ip_address}:{email or 'blank'}"
+            if not _consume_rate_limit('forgot_password', rate_key, limit, window):
+                messages.error(request, "Too many reset requests. Please try again later.")
+                _create_audit_log(
+                    request,
+                    action='forgot_password',
+                    status='rate_limited',
+                    identifier=email,
+                    metadata={'reason': 'too_many_requests'},
+                )
+                return redirect('forgot_password')
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        email = (form.cleaned_data.get('email') or '').strip().casefold()
+        _create_audit_log(
+            self.request,
+            action='forgot_password',
+            status='success',
+            identifier=email,
+        )
+        return super().form_valid(form)
 
 @login_required
 def landing(request):
@@ -318,11 +410,22 @@ def delete_product(request, product_id):
         try:
             product.delete()
             messages.success(request, f"Product '{product_name}' deleted successfully!")
-        except ProtectedError:
-            messages.error(
-                request,
-                f"Cannot delete '{product_name}' because it is referenced by checkout history.",
-            )
+        except ProtectedError as e:
+            protected_models = {
+                f"{obj._meta.app_label}.{obj._meta.model_name}"
+                for obj in getattr(e, 'protected_objects', [])
+            }
+            # NOTE: keep deletion blocked to preserve inventory/audit trails.
+            if any(model_name.endswith('stockmovement') for model_name in protected_models):
+                messages.error(
+                    request,
+                    f"Cannot delete '{product_name}' because stock movement logs exist for this product.",
+                )
+            else:
+                messages.error(
+                    request,
+                    f"Cannot delete '{product_name}' because it is referenced by checkout history.",
+                )
         except Exception as e:
             messages.error(request, f"Error deleting product: {str(e)}")
         return redirect('product')
@@ -407,18 +510,63 @@ def login_view(request):
     form = AuthenticationForm()
 
     if request.method == 'POST':
-        form = AuthenticationForm(data=request.POST)
+        raw_username = (request.POST.get('username') or '').strip()
+        user_model = get_user_model()
+        matched_user = user_model.objects.filter(username__iexact=raw_username).only('username').first()
+        canonical_username = matched_user.username if matched_user else raw_username
+        username = canonical_username.casefold()
+        ip_address = _get_client_ip(request)
+        limit = int(getattr(settings, 'LOGIN_RATE_LIMIT_ATTEMPTS', 5))
+        window = int(getattr(settings, 'LOGIN_RATE_LIMIT_WINDOW_SECONDS', 300))
+        rate_key = f"{ip_address}:{username or 'blank'}"
+
+        if not _consume_rate_limit('login', rate_key, limit, window):
+            messages.error(request, "Too many login attempts. Please try again later.")
+            _create_audit_log(
+                request,
+                action='login',
+                status='rate_limited',
+                identifier=username,
+                metadata={'reason': 'too_many_attempts'},
+            )
+            return render(request, 'auth/login.html', {'form': AuthenticationForm(data=request.POST)})
+
+        auth_payload = request.POST.copy()
+        auth_payload['username'] = canonical_username
+        form = AuthenticationForm(data=auth_payload)
 
         if form.is_valid():
             user = form.get_user()
             login(request, user)
+            _clear_rate_limit('login', rate_key)
+            _create_audit_log(
+                request,
+                action='login',
+                status='success',
+                user=user,
+                identifier=user.username,
+            )
             return redirect('landing')
         else:
             messages.error(request, "Invalid username or password.")
+            _create_audit_log(
+                request,
+                action='login',
+                status='failed',
+                identifier=username,
+            )
 
     return render(request, 'auth/login.html', {'form': form})
 
 def logout_view(request):
+    if request.user.is_authenticated:
+        _create_audit_log(
+            request,
+            action='logout',
+            status='success',
+            user=request.user,
+            identifier=request.user.username,
+        )
     logout(request)
     return redirect('login')
 
@@ -675,6 +823,141 @@ def restore_build(request, build_id):
 
 
 @admin_required
+def delete_build(request, build_id):
+    if request.method != 'POST':
+        return redirect('checkout-history')
+
+    next_view = request.POST.get('next_view', 'archived')
+    if next_view not in ('active', 'archived'):
+        next_view = 'archived'
+
+    confirm_delete = (request.POST.get('confirm_delete') or '').strip()
+    build = get_object_or_404(PCBuild, id=build_id, status='checked_out')
+
+    if not build.is_archived:
+        messages.error(request, "Only archived builds can be deleted permanently.")
+        _create_audit_log(
+            request,
+            action='delete_build',
+            status='failed',
+            user=request.user,
+            identifier=str(build.id),
+            metadata={'reason': 'build_not_archived'},
+        )
+        return redirect(f"/pc-builder/history/?view={next_view}")
+
+    if confirm_delete != 'DELETE':
+        messages.error(request, "Permanent delete cancelled. Type DELETE to confirm.")
+        _create_audit_log(
+            request,
+            action='delete_build',
+            status='failed',
+            user=request.user,
+            identifier=str(build.id),
+            metadata={'reason': 'missing_confirmation'},
+        )
+        return redirect(f"/pc-builder/history/?view={next_view}")
+
+    deleted_build_id = build.id
+    deleted_username = build.user.username
+    deleted_total = str(build.total_price)
+    build.delete()
+
+    _create_audit_log(
+        request,
+        action='delete_build',
+        status='success',
+        user=request.user,
+        identifier=str(deleted_build_id),
+        metadata={
+            'target_user': deleted_username,
+            'total_price': deleted_total,
+        },
+    )
+    messages.success(request, f"Build #{deleted_build_id} deleted permanently.")
+    return redirect(f"/pc-builder/history/?view={next_view}")
+
+
+@admin_required
+def bulk_manage_builds(request):
+    if request.method != 'POST':
+        return redirect('checkout-history')
+
+    action = (request.POST.get('bulk_action') or '').strip()
+    next_view = request.POST.get('next_view', 'active')
+    if next_view not in ('active', 'archived'):
+        next_view = 'active'
+
+    raw_ids = request.POST.getlist('selected_build_ids')
+    try:
+        selected_ids = [int(value) for value in raw_ids]
+    except (TypeError, ValueError):
+        selected_ids = []
+
+    if not selected_ids:
+        messages.error(request, "No builds selected.")
+        return redirect(f"/pc-builder/history/?view={next_view}")
+
+    builds = PCBuild.objects.filter(id__in=selected_ids, status='checked_out')
+    if not builds.exists():
+        messages.error(request, "Selected builds are no longer available.")
+        return redirect(f"/pc-builder/history/?view={next_view}")
+
+    changed_count = 0
+
+    if action == 'archive':
+        for build in builds:
+            if not build.is_archived:
+                build.is_archived = True
+                build.save(update_fields=['is_archived'])
+                changed_count += 1
+        messages.success(request, f"{changed_count} build(s) archived.")
+        return redirect("/pc-builder/history/?view=active")
+
+    if action == 'restore':
+        for build in builds:
+            if build.is_archived:
+                build.is_archived = False
+                build.save(update_fields=['is_archived'])
+                changed_count += 1
+        messages.success(request, f"{changed_count} build(s) restored.")
+        return redirect("/pc-builder/history/?view=archived")
+
+    if action == 'delete':
+        confirm_delete = (request.POST.get('confirm_delete') or '').strip()
+        if confirm_delete != 'DELETE':
+            messages.error(request, "Bulk delete cancelled. Type DELETE to confirm.")
+            return redirect("/pc-builder/history/?view=archived")
+
+        for build in builds:
+            if not build.is_archived:
+                continue
+            deleted_build_id = build.id
+            deleted_username = build.user.username
+            deleted_total = str(build.total_price)
+            build.delete()
+            changed_count += 1
+            _create_audit_log(
+                request,
+                action='delete_build',
+                status='success',
+                user=request.user,
+                identifier=str(deleted_build_id),
+                metadata={
+                    'target_user': deleted_username,
+                    'total_price': deleted_total,
+                    'bulk': True,
+                },
+            )
+
+        messages.success(request, f"{changed_count} build(s) deleted permanently.")
+        return redirect("/pc-builder/history/?view=archived")
+
+    messages.error(request, "Invalid bulk action.")
+    return redirect(f"/pc-builder/history/?view={next_view}")
+
+
+@admin_required
 def archive_product(request, product_id):
     if request.method != 'POST':
         return redirect('product')
@@ -698,3 +981,76 @@ def restore_product(request, product_id):
         product.save(update_fields=['is_archived'])
         messages.success(request, f"Product '{product.name}' restored.")
     return redirect('product')
+
+
+@admin_required
+def bulk_manage_products(request):
+    if request.method != 'POST':
+        return redirect('product')
+
+    action = (request.POST.get('bulk_action') or '').strip()
+    next_querystring = (request.POST.get('next_querystring') or '').strip()
+    redirect_url = '/product/'
+    if next_querystring:
+        redirect_url = f"{redirect_url}?{next_querystring}"
+
+    raw_ids = request.POST.getlist('selected_product_ids')
+    try:
+        selected_ids = [int(value) for value in raw_ids]
+    except (TypeError, ValueError):
+        selected_ids = []
+
+    if not selected_ids:
+        messages.error(request, "No products selected.")
+        return redirect(redirect_url)
+
+    products_qs = Product.objects.filter(id__in=selected_ids)
+    if not products_qs.exists():
+        messages.error(request, "Selected products are no longer available.")
+        return redirect(redirect_url)
+
+    changed_count = 0
+    blocked_count = 0
+
+    if action == 'archive':
+        for product in products_qs:
+            if not product.is_archived:
+                product.is_archived = True
+                product.save(update_fields=['is_archived'])
+                changed_count += 1
+        messages.success(request, f"{changed_count} product(s) archived.")
+        return redirect(redirect_url)
+
+    if action == 'restore':
+        for product in products_qs:
+            if product.is_archived:
+                product.is_archived = False
+                product.save(update_fields=['is_archived'])
+                changed_count += 1
+        messages.success(request, f"{changed_count} product(s) restored.")
+        return redirect(redirect_url)
+
+    if action == 'delete':
+        confirm_delete = (request.POST.get('confirm_delete') or '').strip()
+        if confirm_delete != 'DELETE':
+            messages.error(request, "Bulk delete cancelled. Type DELETE to confirm.")
+            return redirect(redirect_url)
+
+        for product in products_qs:
+            try:
+                product.delete()
+                changed_count += 1
+            except ProtectedError:
+                blocked_count += 1
+
+        if changed_count:
+            messages.success(request, f"{changed_count} product(s) deleted permanently.")
+        if blocked_count:
+            messages.error(
+                request,
+                f"{blocked_count} product(s) could not be deleted because they have related checkout/stock records.",
+            )
+        return redirect(redirect_url)
+
+    messages.error(request, "Invalid bulk action.")
+    return redirect(redirect_url)

@@ -3,24 +3,208 @@
 {% block title %}Sign Up{% endblock %}
 
 {% block content %}
-<div class="card">
-    <h2>Create Account</h2>
+<div class="signup-container">
+    <div class="signup-card">
+        <div class="signup-header">
+            <h1>Create Account</h1>
+            <p>Set up your Inventory account to get started.</p>
+        </div>
 
-    {% if messages %}
-        {% for msg in messages %}
-            <p class="error">{{ msg }}</p>
-        {% endfor %}
-    {% endif %}
+        {% if messages %}
+            {% for msg in messages %}
+                <div class="error-box">{{ msg }}</div>
+            {% endfor %}
+        {% endif %}
 
-    <form method="POST">
-        {% csrf_token %}
-        {{ form.as_p }}
+        {% if form.non_field_errors %}
+            <div class="error-box">
+                {% for error in form.non_field_errors %}
+                    <div>{{ error }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
 
-        <button type="submit">Sign Up</button>
-    </form>
+        <form method="POST" class="signup-form">
+            {% csrf_token %}
 
-    <div class="center">
-        <p>Already have an account? <a href="{% url 'login' %}">Log in</a></p>
+            <div class="form-group">
+                <label for="{{ form.username.id_for_label }}">Username</label>
+                {{ form.username }}
+                {% if form.username.errors %}
+                    <small class="field-error">{{ form.username.errors|join:", " }}</small>
+                {% endif %}
+                {% if form.username.help_text %}
+                    <small class="help-text">{{ form.username.help_text }}</small>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.email.id_for_label }}">Email</label>
+                {{ form.email }}
+                {% if form.email.errors %}
+                    <small class="field-error">{{ form.email.errors|join:", " }}</small>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.password1.id_for_label }}">Password</label>
+                {{ form.password1 }}
+                {% if form.password1.errors %}
+                    <small class="field-error">{{ form.password1.errors|join:", " }}</small>
+                {% endif %}
+                {% if form.password1.help_text %}
+                    <small class="help-text">{{ form.password1.help_text|safe }}</small>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.password2.id_for_label }}">Confirm Password</label>
+                {{ form.password2 }}
+                {% if form.password2.errors %}
+                    <small class="field-error">{{ form.password2.errors|join:", " }}</small>
+                {% endif %}
+                {% if form.password2.help_text %}
+                    <small class="help-text">{{ form.password2.help_text }}</small>
+                {% endif %}
+            </div>
+
+            <button type="submit" class="signup-button">Create Account</button>
+        </form>
+
+        <div class="signup-footer">
+            <p>Already have an account? <a href="{% url 'login' %}">Log in</a></p>
+        </div>
     </div>
 </div>
+
+<style>
+.signup-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background:
+        radial-gradient(circle at top right, rgba(0, 123, 255, 0.1), transparent 38%),
+        radial-gradient(circle at bottom left, rgba(77, 182, 172, 0.12), transparent 36%),
+        #f5f8ff;
+}
+
+.signup-card {
+    width: 100%;
+    max-width: 560px;
+    background: #fff;
+    border: 1px solid #dbe5f4;
+    border-radius: 18px;
+    box-shadow: 0 24px 60px rgba(18, 40, 88, 0.16);
+    padding: 36px 34px;
+}
+
+.signup-header h1 {
+    margin: 0;
+    color: #0b2a57;
+    font-size: 34px;
+    line-height: 1.1;
+}
+
+.signup-header p {
+    margin: 10px 0 22px;
+    color: #5a6a86;
+    font-size: 14px;
+}
+
+.signup-form {
+    display: grid;
+    gap: 14px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 7px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #2a3f67;
+}
+
+.form-group input {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #c8d7ee;
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 14px;
+    background: #fcfdff;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.14);
+}
+
+.help-text {
+    display: block;
+    margin-top: 7px;
+    color: #667792;
+    font-size: 12px;
+}
+
+.help-text ul {
+    margin: 8px 0 0 18px;
+    padding: 0;
+}
+
+.field-error {
+    display: block;
+    margin-top: 6px;
+    color: #b42318;
+    font-size: 12px;
+}
+
+.error-box {
+    border: 1px solid #f4c8c3;
+    background: #fff3f1;
+    color: #a7271a;
+    padding: 10px 12px;
+    border-radius: 10px;
+    margin-bottom: 14px;
+    font-size: 13px;
+}
+
+.signup-button {
+    margin-top: 4px;
+    border: 0;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #007bff, #0a63cc);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    padding: 13px 16px;
+    cursor: pointer;
+}
+
+.signup-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 22px rgba(0, 96, 210, 0.25);
+}
+
+.signup-footer {
+    border-top: 1px solid #e6edf8;
+    margin-top: 20px;
+    padding-top: 16px;
+    text-align: center;
+}
+
+.signup-footer p {
+    margin: 0;
+    color: #60718f;
+    font-size: 14px;
+}
+
+.signup-footer a {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 700;
+}
+</style>
 {% endblock %}

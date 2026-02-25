@@ -5,11 +5,20 @@
 
 {% block content %}
 <div class="login-container">
+    <div class="bg-orb orb-a"></div>
+    <div class="bg-orb orb-b"></div>
+
     <div class="login-card">
         <div class="login-header">
             <h1>Welcome Back</h1>
             <p>Sign in to continue to Inventory System</p>
         </div>
+
+        {% if messages %}
+            {% for msg in messages %}
+                <div class="error-box">{{ msg }}</div>
+            {% endfor %}
+        {% endif %}
 
         <form method="POST" class="login-form">
             {% csrf_token %}
@@ -43,78 +52,110 @@
 
 <style>
 .login-container {
+    position: relative;
+    overflow: hidden;
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #f8f9fa;
-    padding: 20px;
+    background:
+        radial-gradient(circle at 7% 8%, rgba(0, 123, 255, 0.1), transparent 34%),
+        radial-gradient(circle at 93% 88%, rgba(0, 123, 255, 0.08), transparent 36%),
+        linear-gradient(180deg, #f4f8ff 0%, #ecf1f9 100%);
+    padding: 24px;
+}
+
+.bg-orb {
+    position: absolute;
+    width: 360px;
+    height: 360px;
+    border-radius: 999px;
+    filter: blur(28px);
+    pointer-events: none;
+}
+
+.orb-a {
+    top: -120px;
+    right: -120px;
+    background: rgba(24, 128, 255, 0.18);
+}
+
+.orb-b {
+    bottom: -130px;
+    left: -120px;
+    background: rgba(66, 184, 131, 0.14);
 }
 
 .login-card {
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    padding: 40px;
+    position: relative;
+    z-index: 1;
+    background: rgba(255, 255, 255, 0.96);
+    border-radius: 20px;
+    box-shadow: 0 24px 58px rgba(15, 36, 79, 0.16);
+    padding: 38px 34px;
     width: 100%;
-    max-width: 420px;
-    border: 1px solid #ddd;
+    max-width: 470px;
+    border: 1px solid #d7e3f4;
 }
 
 .login-header {
     text-align: center;
-    margin-bottom: 30px;
+    margin-bottom: 26px;
 }
 
 .login-header h1 {
-    font-size: 28px;
+    font-size: 36px;
+    letter-spacing: -0.02em;
+    line-height: 1.08;
     font-weight: bold;
-    color: #007bff;
+    color: #0a3a78;
     margin-bottom: 8px;
 }
 
 .login-header p {
-    color: #666;
+    color: #5e6f8e;
     font-size: 14px;
     margin: 0;
 }
 
 .login-form {
-    margin-top: 30px;
+    margin-top: 20px;
 }
 
 .form-group {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 }
 
 .form-group label {
     display: block;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 8px;
-    font-size: 14px;
+    font-weight: 700;
+    color: #2b436d;
+    margin-bottom: 7px;
+    font-size: 13px;
+    letter-spacing: 0.02em;
 }
 
 .form-group input {
     width: 100%;
-    padding: 12px 16px;
-    border: 2px solid #ddd;
-    border-radius: 8px;
-    font-size: 15px;
+    padding: 12px 14px;
+    border: 1px solid #c8d7ee;
+    border-radius: 10px;
+    font-size: 14px;
     transition: all 0.3s;
     box-sizing: border-box;
+    background: #fcfdff;
 }
 
 .form-group input:focus {
     outline: none;
     border-color: #007bff;
-    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.14);
 }
 
 .helper-links {
     text-align: right;
-    margin-top: -8px;
-    margin-bottom: 12px;
+    margin-top: -4px;
+    margin-bottom: 10px;
 }
 
 .helper-links a {
@@ -126,41 +167,61 @@
 
 .login-button {
     width: 100%;
-    padding: 14px;
-    background: #007bff;
+    min-height: 46px;
+    padding: 0 16px;
+    background: linear-gradient(135deg, #007bff, #0a63cc);
     color: white;
     border: none;
-    border-radius: 8px;
-    font-size: 16px;
-    font-weight: 600;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 700;
     cursor: pointer;
     transition: all 0.3s;
-    margin-top: 10px;
+    margin-top: 8px;
 }
 
 .login-button:hover {
-    background: #0056b3;
-    transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(0, 123, 255, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 12px 20px rgba(0, 102, 214, 0.24);
 }
 
 .login-footer {
     text-align: center;
-    margin-top: 24px;
-    padding-top: 24px;
-    border-top: 1px solid #ddd;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #e5edf8;
 }
 
 .login-footer p {
-    color: #666;
+    color: #60718f;
     font-size: 14px;
     margin: 0;
 }
 
 .login-footer a {
     color: #007bff;
-    font-weight: 600;
+    font-weight: 700;
     text-decoration: none;
+}
+
+.error-box {
+    border: 1px solid #f4c8c3;
+    background: #fff3f1;
+    color: #a7271a;
+    padding: 10px 12px;
+    border-radius: 10px;
+    margin-bottom: 14px;
+    font-size: 13px;
+}
+
+@media (max-width: 540px) {
+    .login-card {
+        padding: 30px 20px;
+    }
+
+    .login-header h1 {
+        font-size: 32px;
+    }
 }
 </style>
 {% endblock %}

@@ -9,6 +9,152 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/ui.css' %}">
+    <style>
+        .btn-delete-modern {
+            border: 1px solid #f3b4b4;
+            background: linear-gradient(135deg, #fff4f4, #ffe8e8);
+            color: #9b1c1c;
+            font-weight: 700;
+            box-shadow: 0 6px 14px rgba(179, 52, 52, 0.14);
+        }
+
+        .btn-delete-modern:hover {
+            background: linear-gradient(135deg, #ffe9e9, #ffd9d9);
+            transform: translateY(-1px);
+            box-shadow: 0 10px 18px rgba(179, 52, 52, 0.2);
+        }
+
+        .row-actions {
+            position: relative;
+            display: inline-block;
+        }
+
+        .row-actions-toggle {
+            min-width: 42px;
+            min-height: 36px;
+            border-radius: 12px;
+            border: 1px solid #d3dbff;
+            background: linear-gradient(160deg, #fbfcff, #edf2ff);
+            color: #3f46b6;
+            font-size: 18px;
+            line-height: 1;
+            font-weight: 700;
+            box-shadow: 0 8px 16px rgba(63, 70, 182, 0.14);
+            padding: 6px 10px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+
+        .row-actions-toggle:hover {
+            transform: translateY(-1px);
+            border-color: #bfc9ff;
+            box-shadow: 0 12px 20px rgba(63, 70, 182, 0.2);
+        }
+
+        .row-actions-menu {
+            position: absolute;
+            right: 0;
+            top: calc(100% + 8px);
+            min-width: 206px;
+            border: 1px solid #dce4ff;
+            border-radius: 14px;
+            background: linear-gradient(170deg, rgba(255, 255, 255, 0.98), rgba(245, 248, 255, 0.96));
+            box-shadow: 0 18px 34px rgba(45, 61, 132, 0.2);
+            padding: 8px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-6px) scale(0.98);
+            pointer-events: none;
+            transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
+            z-index: 20;
+        }
+
+        .row-actions-menu.is-open {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0) scale(1);
+            pointer-events: auto;
+        }
+
+        .row-actions-menu::before {
+            content: "";
+            position: absolute;
+            inset: 0 0 auto 0;
+            height: 3px;
+            border-top-left-radius: 14px;
+            border-top-right-radius: 14px;
+            background: linear-gradient(90deg, #5b67ea, #6f7cff, #34d399);
+        }
+
+        .row-actions-item {
+            width: 100%;
+            border: none;
+            background: transparent;
+            color: #2e356d;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 700;
+            border-radius: 10px;
+            padding: 10px 11px;
+            cursor: pointer;
+            display: block;
+            transition: background-color 0.16s ease, transform 0.16s ease, color 0.16s ease;
+        }
+
+        .row-actions-item:hover {
+            background: #edf2ff;
+            color: #273492;
+            transform: translateX(1px);
+        }
+
+        .row-actions-item-view::before {
+            content: "\1F441";
+            margin-right: 8px;
+            color: #3f46b6;
+            font-size: 12px;
+        }
+
+        .row-actions-item-reorder::before {
+            content: "\21BB";
+            margin-right: 8px;
+            color: #2b7a4b;
+            font-size: 12px;
+        }
+
+        .row-actions-item-archive::before {
+            content: "\25EF";
+            margin-right: 8px;
+            color: #9a5600;
+            font-size: 12px;
+        }
+
+        .row-actions-item-restore::before {
+            content: "\2713";
+            margin-right: 8px;
+            color: #0d7f4f;
+            font-size: 12px;
+        }
+
+        .row-actions-item-danger {
+            color: #b42323;
+        }
+
+        .row-actions-item-danger:hover {
+            background: #fff2f2;
+            color: #8f1515;
+        }
+
+        .row-actions-item-danger::before {
+            content: "\2715";
+            margin-right: 8px;
+        }
+
+        @media (max-width: 720px) {
+            .row-actions-menu {
+                right: auto;
+                left: 0;
+            }
+        }
+    </style>
 </head>
 <body>
 <div class="page">
@@ -28,7 +174,9 @@
             </div>
             <ul class="nav-list">
                 <li><a href="{% url 'landing' %}">Dashboard <span>&rsaquo;</span></a></li>
+                {% if user.profile.role == 'admin' %}
                 <li><a href="{% url 'product' %}">Product Management <span>&rsaquo;</span></a></li>
+                {% endif %}
                 <li><a href="{% url 'category' %}">Masterlist <span>&rsaquo;</span></a></li>
                 <li><a href="{% url 'pc-builder' %}">Price Quote <span>&rsaquo;</span></a></li>
                 <li><a class="active" href="{% url 'checkout-history' %}">Checkout History <span>&rsaquo;</span></a></li>
@@ -78,10 +226,33 @@
         </section>
 
         <section class="card">
+            {% if user.profile.role == 'admin' and builds %}
+            <div class="actions" style="margin-bottom: 10px;">
+                <form id="bulk-builds-form" method="post" action="{% url 'bulk-manage-builds' %}" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    {% csrf_token %}
+                    <input type="hidden" name="next_view" value="{% if show_archived %}archived{% else %}active{% endif %}">
+                    <input type="hidden" name="confirm_delete" value="">
+                    <button type="submit" class="btn btn-danger" name="bulk_action" value="{% if show_archived %}restore{% else %}archive{% endif %}">
+                        {% if show_archived %}Restore Selected{% else %}Archive Selected{% endif %}
+                    </button>
+                    {% if show_archived %}
+                    <button type="submit" class="btn btn-delete-modern" name="bulk_action" value="delete" onclick="return confirmBulkDelete()">
+                        Delete Selected Permanently
+                    </button>
+                    {% endif %}
+                    <span class="muted" id="bulk-selected-count">0 selected</span>
+                </form>
+            </div>
+            {% endif %}
             <div class="table-wrap">
                 <table>
                     <thead>
                         <tr>
+                            {% if user.profile.role == 'admin' %}
+                            <th>
+                                <input type="checkbox" id="select-all-builds" aria-label="Select all builds">
+                            </th>
+                            {% endif %}
                             <th>Build ID</th>
                             <th>User</th>
                             <th>Items</th>
@@ -93,36 +264,50 @@
                     <tbody>
                         {% for build in builds %}
                         <tr>
+                            {% if user.profile.role == 'admin' %}
+                            <td>
+                                <input type="checkbox" class="build-select-checkbox" name="selected_build_ids" value="{{ build.id }}" form="bulk-builds-form" aria-label="Select build {{ build.id }}">
+                            </td>
+                            {% endif %}
                             <td>#{{ build.display_number }}</td>
                             <td>{{ build.user.username }}</td>
                             <td>{{ build.item_count }}</td>
                             <td><span class="text-success">PHP {{ build.total_price|floatformat:2|intcomma }}</span></td>
                             <td>{{ build.created_at|date:"M d, Y h:i A" }}</td>
                             <td>
-                                <div class="actions">
-                                    <a class="btn btn-ghost" href="{% url 'checkout-history-detail' build.id %}?view={% if show_archived %}archived{% else %}active{% endif %}">View Details</a>
-                                    <a class="btn btn-primary" href="{% url 'reorder-build' build.id %}?view={% if show_archived %}archived{% else %}active{% endif %}">Reorder</a>
+                                <div class="row-actions">
+                                    <button type="button" class="row-actions-toggle" aria-label="Open actions menu">&#8942;</button>
+                                    <div class="row-actions-menu">
+                                    <a class="row-actions-item row-actions-item-view" href="{% url 'checkout-history-detail' build.id %}?view={% if show_archived %}archived{% else %}active{% endif %}">View Details</a>
+                                    <a class="row-actions-item row-actions-item-reorder" href="{% url 'reorder-build' build.id %}?view={% if show_archived %}archived{% else %}active{% endif %}">Reorder</a>
                                     {% if user.profile.role == 'admin' %}
                                         {% if show_archived %}
-                                        <form method="post" action="{% url 'restore-build' build.id %}" style="display:inline; margin:0;">
+                                        <form method="post" action="{% url 'restore-build' build.id %}">
                                             {% csrf_token %}
                                             <input type="hidden" name="next_view" value="archived">
-                                            <button type="submit" class="btn btn-restore">Restore</button>
+                                            <button type="submit" class="row-actions-item row-actions-item-restore">Restore</button>
+                                        </form>
+                                        <form method="post" action="{% url 'delete-build' build.id %}" onsubmit="return confirmPermanentDelete(this, {{ build.id }})">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="next_view" value="archived">
+                                            <input type="hidden" name="confirm_delete" value="">
+                                            <button type="submit" class="row-actions-item row-actions-item-danger">Delete Permanently</button>
                                         </form>
                                         {% else %}
-                                        <form method="post" action="{% url 'archive-build' build.id %}" style="display:inline; margin:0;">
+                                        <form method="post" action="{% url 'archive-build' build.id %}">
                                             {% csrf_token %}
                                             <input type="hidden" name="next_view" value="active">
-                                            <button type="submit" class="btn btn-danger" onclick="return confirm('Archive build #{{ build.id }}?')">Archive</button>
+                                            <button type="submit" class="row-actions-item row-actions-item-archive" onclick="return confirm('Archive build #{{ build.id }}?')">Archive</button>
                                         </form>
                                         {% endif %}
                                     {% endif %}
+                                    </div>
                                 </div>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="6" class="muted">
+                            <td colspan="{% if user.profile.role == 'admin' %}7{% else %}6{% endif %}" class="muted">
                                 {% if show_archived %}
                                     No archived checkout records yet.
                                 {% else %}
@@ -157,10 +342,111 @@
         </main>
     </div>
 </div>
-</body>
-</html>
-
 <script>
+function updateBulkSelectedCount(){
+    var checkboxes = document.querySelectorAll('.build-select-checkbox');
+    var checked = document.querySelectorAll('.build-select-checkbox:checked');
+    var label = document.getElementById('bulk-selected-count');
+    if(label){
+        label.textContent = checked.length + ' selected';
+    }
+    var selectAll = document.getElementById('select-all-builds');
+    if(selectAll){
+        selectAll.checked = checkboxes.length > 0 && checked.length === checkboxes.length;
+        selectAll.indeterminate = checked.length > 0 && checked.length < checkboxes.length;
+    }
+}
+
+function confirmBulkDelete(){
+    var checked = document.querySelectorAll('.build-select-checkbox:checked');
+    if(checked.length === 0){
+        alert('Select at least one build first.');
+        return false;
+    }
+    var typed = window.prompt("Type DELETE to permanently remove selected archived builds.");
+    if(typed !== 'DELETE'){
+        alert('Bulk delete cancelled. You must type DELETE exactly.');
+        return false;
+    }
+    var form = document.getElementById('bulk-builds-form');
+    if(form){
+        var confirmInput = form.querySelector('input[name=\"confirm_delete\"]');
+        if(confirmInput){
+            confirmInput.value = typed;
+        }
+    }
+    return true;
+}
+
+function confirmPermanentDelete(form, buildId){
+    var typed = window.prompt("Type DELETE to permanently remove build #" + buildId + ". This cannot be undone.");
+    if(typed !== "DELETE"){
+        alert("Delete cancelled. You must type DELETE exactly.");
+        return false;
+    }
+    var hiddenInput = form.querySelector('input[name=\"confirm_delete\"]');
+    if(hiddenInput){
+        hiddenInput.value = typed;
+    }
+    return true;
+}
+
+(function(){
+    var selectAll = document.getElementById('select-all-builds');
+    var checkboxes = document.querySelectorAll('.build-select-checkbox');
+    if(selectAll){
+        selectAll.addEventListener('change', function(){
+            checkboxes.forEach(function(box){ box.checked = selectAll.checked; });
+            updateBulkSelectedCount();
+        });
+    }
+    checkboxes.forEach(function(box){
+        box.addEventListener('change', updateBulkSelectedCount);
+    });
+    updateBulkSelectedCount();
+})();
+
+// Row action dropdown menu
+(function(){
+    var rows = document.querySelectorAll('.row-actions');
+    if(!rows.length) return;
+
+    function closeAllMenus(){
+        rows.forEach(function(row){
+            var menu = row.querySelector('.row-actions-menu');
+            if(menu){
+                menu.classList.remove('is-open');
+            }
+        });
+    }
+
+    rows.forEach(function(row){
+        var toggle = row.querySelector('.row-actions-toggle');
+        var menu = row.querySelector('.row-actions-menu');
+        if(!toggle || !menu) return;
+
+        toggle.addEventListener('click', function(e){
+            e.stopPropagation();
+            var isOpen = menu.classList.contains('is-open');
+            closeAllMenus();
+            if(!isOpen){
+                menu.classList.add('is-open');
+            }
+        });
+
+        menu.addEventListener('click', function(e){
+            e.stopPropagation();
+        });
+    });
+
+    document.addEventListener('click', closeAllMenus);
+    document.addEventListener('keydown', function(e){
+        if(e.key === 'Escape'){
+            closeAllMenus();
+        }
+    });
+})();
+
 // Confirm before logging out
 (function(){
     try{
@@ -181,3 +467,5 @@
 })();
 </script>
 
+</body>
+</html>

@@ -145,3 +145,32 @@ class StockMovement(models.Model):
     def __str__(self):
         sign = '+' if self.quantity_change >= 0 else ''
         return f"{self.product.name} {sign}{self.quantity_change} ({self.reason})"
+
+
+class AuditLog(models.Model):
+    ACTION_CHOICES = (
+        ('login', 'Login'),
+        ('logout', 'Logout'),
+        ('forgot_password', 'Forgot Password'),
+        ('delete_build', 'Delete Build'),
+    )
+    STATUS_CHOICES = (
+        ('success', 'Success'),
+        ('failed', 'Failed'),
+        ('rate_limited', 'Rate Limited'),
+    )
+
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='audit_logs')
+    action = models.CharField(max_length=50, choices=ACTION_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='success')
+    identifier = models.CharField(max_length=255, blank=True, default='')
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        who = self.user.username if self.user else (self.identifier or 'anonymous')
+        return f"{self.action} ({self.status}) - {who}"

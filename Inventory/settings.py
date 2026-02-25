@@ -36,7 +36,18 @@ SECRET_KEY = 'django-insecure-qux^6m4694!r!xy3#1s7f2^t3%cz!i&e@kkzx6&=_om)t&ay0b
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+if DEBUG and not os.getenv('ALLOWED_HOSTS'):
+    # Dev convenience: allow access from other devices on the same network
+    # without editing settings each time.
+    ALLOWED_HOSTS = ['*']
+else:
+    _raw_allowed_hosts = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost')
+    ALLOWED_HOSTS = [host.strip() for host in _raw_allowed_hosts.split(',') if host.strip()]
+
+# Prevent cookie collisions with other local Django projects.
+CSRF_COOKIE_NAME = 'inventory_csrftoken'
+SESSION_COOKIE_NAME = 'inventory_sessionid'
+CSRF_FAILURE_VIEW = 'Base.views.csrf_failure'
 
 
 # Application definition

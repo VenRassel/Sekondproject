@@ -28,7 +28,9 @@
             </div>
             <ul class="nav-list">
                 <li><a class="active" href="{% url 'landing' %}">Dashboard <span>&rsaquo;</span></a></li>
+                {% if user.profile.role == 'admin' %}
                 <li><a href="{% url 'product' %}">Product Management <span>&rsaquo;</span></a></li>
+                {% endif %}
                 <li><a href="{% url 'category' %}">Masterlist <span>&rsaquo;</span></a></li>
                 <li><a href="{% url 'pc-builder' %}">Price Quote <span>&rsaquo;</span></a></li>
                 <li><a href="{% url 'checkout-history' %}">Checkout History <span>&rsaquo;</span></a></li>
@@ -71,7 +73,9 @@
 
             <section class="card">
                 <div class="actions" style="margin-bottom:12px;">
+                    {% if user.profile.role == 'admin' %}
                     <a class="btn btn-primary" href="{% url 'product' %}">Manage Products</a>
+                    {% endif %}
                     <a class="btn btn-ghost" href="{% url 'pc-builder' %}">Open PC Builder</a>
                 </div>
                 <div class="table-wrap">
