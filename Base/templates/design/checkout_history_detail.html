@@ -43,18 +43,20 @@
                     <a class="btn btn-ghost" href="{% url 'checkout-history' %}?view={{ history_view }}">Back to History</a>
                     <a class="btn btn-ghost" href="{% url 'pc-builder' %}">Back to PC Builder</a>
                     <a class="btn btn-primary" href="{% url 'reorder-build' build.id %}?view={{ history_view }}">Reorder This Build</a>
-                    {% if build.is_archived %}
-                    <form method="post" action="{% url 'restore-build' build.id %}" style="display:inline; margin:0;">
-                        {% csrf_token %}
-                        <input type="hidden" name="next_view" value="{{ history_view }}">
-                        <button type="submit" class="btn btn-restore">Restore</button>
-                    </form>
-                    {% else %}
-                    <form method="post" action="{% url 'archive-build' build.id %}" style="display:inline; margin:0;">
-                        {% csrf_token %}
-                        <input type="hidden" name="next_view" value="{{ history_view }}">
-                        <button type="submit" class="btn btn-danger" onclick="return confirm('Archive build #{{ build.id }}?')">Archive</button>
-                    </form>
+                    {% if user.profile.role == 'admin' %}
+                        {% if build.is_archived %}
+                        <form method="post" action="{% url 'restore-build' build.id %}" style="display:inline; margin:0;">
+                            {% csrf_token %}
+                            <input type="hidden" name="next_view" value="{{ history_view }}">
+                            <button type="submit" class="btn btn-restore">Restore</button>
+                        </form>
+                        {% else %}
+                        <form method="post" action="{% url 'archive-build' build.id %}" style="display:inline; margin:0;">
+                            {% csrf_token %}
+                            <input type="hidden" name="next_view" value="{{ history_view }}">
+                            <button type="submit" class="btn btn-danger" onclick="return confirm('Archive build #{{ build.id }}?')">Archive</button>
+                        </form>
+                        {% endif %}
                     {% endif %}
                 </div>
                 <h1>Checkout Build #{{ build.id }}</h1>

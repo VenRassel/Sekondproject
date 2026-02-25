@@ -2,6 +2,7 @@
 import json
 from datetime import timedelta
 from decimal import Decimal, InvalidOperation
+from functools import wraps
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.core.exceptions import ValidationError
@@ -16,7 +17,8 @@ from .forms import SignUpForm
 from django.contrib.auth import login
 from .models import PCBuild, PCBuildItem, StockMovement
 from django.db import transaction
-from django.db.models import Count, Sum
+from django.db.models.deletion import ProtectedError
+from django.db.models import Count, Exists, OuterRef, Sum
 from django.db.models.functions import TruncMonth
 from django.shortcuts import redirect, get_object_or_404
 from django.utils import timezone
@@ -32,9 +34,23 @@ def _querystring_without_page(request):
     params.pop('page', None)
     return params.urlencode()
 
+def _is_admin(user):
+    profile = getattr(user, 'profile', None)
+    return bool(user.is_authenticated and profile and profile.role == 'admin')
+
+def admin_required(view_func):
+    @wraps(view_func)
+    @login_required
+    def _wrapped_view(request, *args, **kwargs):
+        if not _is_admin(request.user):
+            messages.error(request, "Admin access required for this action.")
+            return redirect('landing')
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
+
 @login_required
 def landing(request):
-    products = Product.objects.all().order_by('-created_at')
+    products = Product.objects.filter(is_archived=False).order_by('-created_at')
     now = timezone.now()
     months_back = 6
     start_date = now - timedelta(days=30 * (months_back - 1))
@@ -77,9 +93,10 @@ def landing(request):
         'sales_chart_build_count_json': json.dumps(chart_builds),
     })
 
-@login_required
+@admin_required
 def product(request):
-    products = Product.objects.all()
+    checkout_item_exists = PCBuildItem.objects.filter(product_id=OuterRef('pk'))
+    products = Product.objects.annotate(has_checkout_history=Exists(checkout_item_exists))
 
     # GET search query
     search_query = request.GET.get('search', '')
@@ -93,6 +110,7 @@ def product(request):
     
     # GET stock status filter
     stock_status = request.GET.get('stock_status', '')
+    archive_status = request.GET.get('archive_status', 'active')
     
     # GET sort option
     sort_by = request.GET.get('sort', '-created_at')
@@ -125,6 +143,15 @@ def product(request):
         products = products.filter(quantity__gt=0, quantity__lte=5)
     elif stock_status == 'out_of_stock':
         products = products.filter(quantity__lte=0)
+
+    # APPLY ARCHIVE FILTER
+    if archive_status == 'archived':
+        products = products.filter(is_archived=True)
+    elif archive_status == 'all':
+        pass
+    else:
+        archive_status = 'active'
+        products = products.filter(is_archived=False)
     
     # APPLY SORTING
     products = products.order_by(sort_by)
@@ -139,11 +166,12 @@ def product(request):
         'min_price': min_price,
         'max_price': max_price,
         'stock_status': stock_status,
+        'archive_status': archive_status,
         'sort_by': sort_by,
         'querystring': querystring,
     })
 
-@login_required
+@admin_required
 def add_product(request):
     if request.method == 'POST':
         name = request.POST.get('name', '')
@@ -193,7 +221,7 @@ def add_product(request):
 
 @login_required
 def category(request):
-    products = Product.objects.all()
+    products = Product.objects.filter(is_archived=False)
     search_query = request.GET.get('search', '')
     category_filter = request.GET.get('category', '')
     min_price = request.GET.get('min_price', '')
@@ -242,7 +270,7 @@ def category(request):
         'querystring': querystring,
     })
 
-@login_required
+@admin_required
 def edit_product(request, product_id):
     product = get_object_or_404(Product, id=product_id)
 
@@ -281,14 +309,22 @@ def edit_product(request, product_id):
     'category_filter': request.GET.get('category', '')
 })
 
-@login_required
+@admin_required
 def delete_product(request, product_id):
     product = get_object_or_404(Product, id=product_id)
 
     if request.method == 'POST':
         product_name = product.name
-        product.delete()
-        messages.success(request, f"Product '{product_name}' deleted successfully!")
+        try:
+            product.delete()
+            messages.success(request, f"Product '{product_name}' deleted successfully!")
+        except ProtectedError:
+            messages.error(
+                request,
+                f"Cannot delete '{product_name}' because it is referenced by checkout history.",
+            )
+        except Exception as e:
+            messages.error(request, f"Error deleting product: {str(e)}")
         return redirect('product')
 
     return redirect('product')
@@ -300,13 +336,13 @@ def pc_builder(request):
     prefill_cancel_url = request.session.pop('prefill_cancel_url', '')
 
     # Fetch products per category
-    ram = Product.objects.filter(category='ram')
-    motherboard = Product.objects.filter(category='motherboard')
-    cpu = Product.objects.filter(category='cpu')
-    gpu = Product.objects.filter(category='gpu')
-    storage = Product.objects.filter(category='storage')
-    psu = Product.objects.filter(category='psu')
-    case = Product.objects.filter(category='case')
+    ram = Product.objects.filter(category='ram', is_archived=False)
+    motherboard = Product.objects.filter(category='motherboard', is_archived=False)
+    cpu = Product.objects.filter(category='cpu', is_archived=False)
+    gpu = Product.objects.filter(category='gpu', is_archived=False)
+    storage = Product.objects.filter(category='storage', is_archived=False)
+    psu = Product.objects.filter(category='psu', is_archived=False)
+    case = Product.objects.filter(category='case', is_archived=False)
 
     return render(request, 'design/pc_builder.html', {
         'ram': ram,
@@ -325,7 +361,10 @@ def pc_builder(request):
 
 @login_required
 def reorder_build(request, build_id):
-    build = get_object_or_404(PCBuild, id=build_id, status='checked_out')
+    build_filters = {'id': build_id, 'status': 'checked_out'}
+    if not _is_admin(request.user):
+        build_filters['user'] = request.user
+    build = get_object_or_404(PCBuild, **build_filters)
     build_items = build.items.select_related('product')
     history_view = request.GET.get('view', 'active')
     if history_view not in ('active', 'archived'):
@@ -388,11 +427,8 @@ def signup_view(request):
         form = SignUpForm(request.POST)
         if form.is_valid():
             user = form.save()
-            role = form.cleaned_data['role']
-
-            # No more duplicate Profile creation
             profile = user.profile
-            profile.role = role
+            profile.role = 'staff'
             profile.save()
 
             messages.success(request, "Account created successfully!")
@@ -475,7 +511,10 @@ def checkout_pc_build(request):
         status='draft'
     )
 
-    products = Product.objects.select_for_update().filter(id__in=requested_quantities.keys())
+    products = Product.objects.select_for_update().filter(
+        id__in=requested_quantities.keys(),
+        is_archived=False,
+    )
     products_map = {product.id: product for product in products}
     if len(products_map) != len(requested_quantities):
         messages.error(request, "One or more selected products do not exist.")
@@ -532,6 +571,8 @@ def checkout_history(request):
         status='checked_out',
         is_archived=show_archived,
     ).annotate(item_count=Count('items')).order_by('-created_at')
+    if not _is_admin(request.user):
+        builds_qs = builds_qs.filter(user=request.user)
     paginator = Paginator(builds_qs, 10)
     builds_page = paginator.get_page(request.GET.get('page'))
     
@@ -571,16 +612,15 @@ def checkout_history(request):
         'show_archived': show_archived,
         'querystring': _querystring_without_page(request),
     }
-    import sys
-    # Debug prints so you can see values when the page is requested
-    print(f"DEBUG checkout_history -> total_builds={total_builds}, total_revenue={total_revenue}, avg_order_value={avg_order_value}", file=sys.stderr)
-
     return render(request, 'design/checkout_history.html', context)
 
 @login_required
 def checkout_history_detail(request, build_id):
     """Display detailed view of a specific build"""
-    build = get_object_or_404(PCBuild, id=build_id)
+    build_filters = {'id': build_id}
+    if not _is_admin(request.user):
+        build_filters['user'] = request.user
+    build = get_object_or_404(PCBuild, **build_filters)
     stock_movements = StockMovement.objects.filter(build=build).order_by('-created_at')
     history_view = request.GET.get('view')
     if history_view not in ('active', 'archived'):
@@ -598,7 +638,7 @@ def checkout_history_detail(request, build_id):
     })
 
 
-@login_required
+@admin_required
 def archive_build(request, build_id):
     if request.method != 'POST':
         return redirect('checkout-history')
@@ -616,7 +656,7 @@ def archive_build(request, build_id):
     return redirect(f"/pc-builder/history/?view={next_view}")
 
 
-@login_required
+@admin_required
 def restore_build(request, build_id):
     if request.method != 'POST':
         return redirect('checkout-history')
@@ -632,3 +672,29 @@ def restore_build(request, build_id):
         messages.success(request, f"Build #{build.id} restored.")
 
     return redirect(f"/pc-builder/history/?view={next_view}")
+
+
+@admin_required
+def archive_product(request, product_id):
+    if request.method != 'POST':
+        return redirect('product')
+
+    product = get_object_or_404(Product, id=product_id)
+    if not product.is_archived:
+        product.is_archived = True
+        product.save(update_fields=['is_archived'])
+        messages.success(request, f"Product '{product.name}' archived.")
+    return redirect('product')
+
+
+@admin_required
+def restore_product(request, product_id):
+    if request.method != 'POST':
+        return redirect('product')
+
+    product = get_object_or_404(Product, id=product_id)
+    if product.is_archived:
+        product.is_archived = False
+        product.save(update_fields=['is_archived'])
+        messages.success(request, f"Product '{product.name}' restored.")
+    return redirect('product')

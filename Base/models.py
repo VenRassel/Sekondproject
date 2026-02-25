@@ -28,6 +28,7 @@ class Product(models.Model):
         validators=[MinValueValidator(0)],
     )
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='ram')
+    is_archived = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

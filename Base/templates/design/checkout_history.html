@@ -102,18 +102,20 @@
                                 <div class="actions">
                                     <a class="btn btn-ghost" href="{% url 'checkout-history-detail' build.id %}?view={% if show_archived %}archived{% else %}active{% endif %}">View Details</a>
                                     <a class="btn btn-primary" href="{% url 'reorder-build' build.id %}?view={% if show_archived %}archived{% else %}active{% endif %}">Reorder</a>
-                                    {% if show_archived %}
-                                    <form method="post" action="{% url 'restore-build' build.id %}" style="display:inline; margin:0;">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="next_view" value="archived">
-                                        <button type="submit" class="btn btn-restore">Restore</button>
-                                    </form>
-                                    {% else %}
-                                    <form method="post" action="{% url 'archive-build' build.id %}" style="display:inline; margin:0;">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="next_view" value="active">
-                                        <button type="submit" class="btn btn-danger" onclick="return confirm('Archive build #{{ build.id }}?')">Archive</button>
-                                    </form>
+                                    {% if user.profile.role == 'admin' %}
+                                        {% if show_archived %}
+                                        <form method="post" action="{% url 'restore-build' build.id %}" style="display:inline; margin:0;">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="next_view" value="archived">
+                                            <button type="submit" class="btn btn-restore">Restore</button>
+                                        </form>
+                                        {% else %}
+                                        <form method="post" action="{% url 'archive-build' build.id %}" style="display:inline; margin:0;">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="next_view" value="active">
+                                            <button type="submit" class="btn btn-danger" onclick="return confirm('Archive build #{{ build.id }}?')">Archive</button>
+                                        </form>
+                                        {% endif %}
                                     {% endif %}
                                 </div>
                             </td>
@@ -178,5 +180,4 @@
     }catch(err){console && console.error && console.error(err)}
 })();
 </script>
-
 

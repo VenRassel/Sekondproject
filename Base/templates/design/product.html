@@ -145,6 +145,15 @@
                             <option value="out_of_stock" {% if stock_status == 'out_of_stock' %}selected{% endif %}>Out of Stock</option>
                         </select>
                     </div>
+
+                    <div class="form-group">
+                        <label for="archive_status">Record Status</label>
+                        <select id="archive_status" name="archive_status">
+                            <option value="active" {% if archive_status == 'active' %}selected{% endif %}>Active Only</option>
+                            <option value="archived" {% if archive_status == 'archived' %}selected{% endif %}>Archived Only</option>
+                            <option value="all" {% if archive_status == 'all' %}selected{% endif %}>All Records</option>
+                        </select>
+                    </div>
                     
                     <!-- Sort Option -->
                     <div class="form-group">
@@ -180,6 +189,7 @@
                             <th>Category</th>
                             <th>Price</th>
                             <th>Quantity</th>
+                            <th>Status</th>
                             <th>Created</th>
                             <th>Actions</th>
                         </tr>
@@ -192,20 +202,34 @@
                             <td>{{ product.category|title }}</td>
                             <td><span class="text-success">PHP {{ product.price|floatformat:2|intcomma }}</span></td>
                             <td>{{ product.quantity }}</td>
+                            <td>{% if product.is_archived %}<span class="muted">Archived</span>{% else %}<span class="text-success">Active</span>{% endif %}</td>
                             <td>{{ product.created_at|date:"M d, Y" }}</td>
                             <td>
                                 <div class="actions">
-                                    <a href="{% url 'edit-product' product.id %}{% if querystring %}?{{ querystring }}{% endif %}" class="btn btn-ghost">Edit</a>
+                                    {% if not product.is_archived %}
+                                        <a href="{% url 'edit-product' product.id %}{% if querystring %}?{{ querystring }}{% endif %}" class="btn btn-ghost">Edit</a>
+                                        <form method="POST" action="{% url 'archive-product' product.id %}" style="display:inline;">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-danger" onclick="return confirm('Archive {{ product.name }}?')">Archive</button>
+                                        </form>
+                                    {% else %}
+                                        <form method="POST" action="{% url 'restore-product' product.id %}" style="display:inline;">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-restore">Restore</button>
+                                        </form>
+                                    {% endif %}
+                                    {% if not product.has_checkout_history %}
                                     <form method="POST" action="{% url 'delete-product' product.id %}" style="display:inline;">
                                         {% csrf_token %}
-                                        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete {{ product.name }}?')">Delete</button>
+                                        <button type="submit" class="btn btn-ghost" onclick="return confirm('Permanently delete {{ product.name }}?')">Delete Permanently</button>
                                     </form>
+                                    {% endif %}
                                 </div>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="7" class="muted">No results found.</td>
+                            <td colspan="8" class="muted">No results found.</td>
                         </tr>
                         {% endfor %}
                     </tbody>

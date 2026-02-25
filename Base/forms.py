@@ -4,7 +4,6 @@ from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from .models import Profile
 from django.contrib.auth.forms import UserCreationForm
-from Base.models import ROLE_CHOICES
 
 class UserUpdateForm(forms.ModelForm):
     first_name = forms.CharField(
@@ -33,11 +32,10 @@ class ProfileUpdateForm(forms.ModelForm):
 
 class SignUpForm(UserCreationForm):
     email = forms.EmailField(required=True)
-    role = forms.ChoiceField(choices=ROLE_CHOICES, required=True)
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password1', 'password2', 'role']
+        fields = ['username', 'email', 'password1', 'password2']
 
 class EmailAuthenticationForm(forms.Form):
     email = forms.EmailField(

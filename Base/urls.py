@@ -1,4 +1,5 @@
-﻿from django.urls import path
+from django.contrib.auth import views as auth_views
+from django.urls import path
 from . import views
 
 urlpatterns = [
@@ -8,12 +9,46 @@ urlpatterns = [
     path('category/', views.category, name='category'),
     path('edit_product/<int:product_id>/', views.edit_product, name='edit-product'),
     path('delete_product/<int:product_id>/', views.delete_product, name='delete-product'),
+    path('archive_product/<int:product_id>/', views.archive_product, name='archive-product'),
+    path('restore_product/<int:product_id>/', views.restore_product, name='restore-product'),
     path('pc_builder/', views.pc_builder, name='pc-builder'),
 
     # auth
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('signup/', views.signup_view, name='signup'),
+    path(
+        'forgot-password/',
+        auth_views.PasswordResetView.as_view(
+            template_name='auth/forgot_password_form.html',
+            email_template_name='auth/forgot_password_email.html',
+            subject_template_name='auth/forgot_password_subject.txt',
+            success_url='/forgot-password/done/',
+        ),
+        name='forgot_password',
+    ),
+    path(
+        'forgot-password/done/',
+        auth_views.PasswordResetDoneView.as_view(
+            template_name='auth/forgot_password_done.html',
+        ),
+        name='forgot_password_done',
+    ),
+    path(
+        'reset/<uidb64>/<token>/',
+        auth_views.PasswordResetConfirmView.as_view(
+            template_name='auth/forgot_password_confirm.html',
+            success_url='/reset/done/',
+        ),
+        name='password_reset_confirm',
+    ),
+    path(
+        'reset/done/',
+        auth_views.PasswordResetCompleteView.as_view(
+            template_name='auth/forgot_password_complete.html',
+        ),
+        name='password_reset_complete',
+    ),
 
     # PROFILE SETTINGS
     path('profile/settings/', views.profile_settings, name='profile-settings'),
@@ -24,5 +59,4 @@ urlpatterns = [
     path('pc-builder/history/<int:build_id>/archive/', views.archive_build, name='archive-build'),
     path('pc-builder/history/<int:build_id>/restore/', views.restore_build, name='restore-build'),
     path('pc-builder/reorder/<int:build_id>/', views.reorder_build, name='reorder-build'),
-
 ]
