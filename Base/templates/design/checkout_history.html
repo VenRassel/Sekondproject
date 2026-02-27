@@ -287,7 +287,7 @@
                                             <input type="hidden" name="next_view" value="archived">
                                             <button type="submit" class="row-actions-item row-actions-item-restore">Restore</button>
                                         </form>
-                                        <form method="post" action="{% url 'delete-build' build.id %}" onsubmit="return confirmPermanentDelete(this, {{ build.id }})">
+                                        <form method="post" action="{% url 'delete-build' build.id %}" data-build-id="{{ build.id }}" onsubmit="return confirmPermanentDelete(this)">
                                             {% csrf_token %}
                                             <input type="hidden" name="next_view" value="archived">
                                             <input type="hidden" name="confirm_delete" value="">
@@ -378,8 +378,10 @@ function confirmBulkDelete(){
     return true;
 }
 
-function confirmPermanentDelete(form, buildId){
-    var typed = window.prompt("Type DELETE to permanently remove build #" + buildId + ". This cannot be undone.");
+function confirmPermanentDelete(form){
+    var buildId = form.getAttribute('data-build-id') || '';
+    var label = buildId ? ("build #" + buildId) : "this build";
+    var typed = window.prompt("Type DELETE to permanently remove " + label + ". This cannot be undone.");
     if(typed !== "DELETE"){
         alert("Delete cancelled. You must type DELETE exactly.");
         return false;
